@@ -1,10 +1,15 @@
 // Package db contains the database connection to SQLite3
 package db
 
-import "database/sql"
+import (
+	"database/sql"
+
+	"github.com/woojiahao/daily-planet/db/models"
+)
 
 type Database struct {
-	db *sql.DB
+	Configuration models.ConfigurationModel
+	Feed          models.FeedModel
 }
 
 func NewDatabase() (*Database, error) {
@@ -13,5 +18,9 @@ func NewDatabase() (*Database, error) {
 		return nil, err
 	}
 
-	return &Database{db: db}, nil
+	database := Database{
+		Configuration: models.ConfigurationModel{DB: db},
+		Feed:          models.FeedModel{DB: db},
+	}
+	return &database, nil
 }
