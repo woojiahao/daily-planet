@@ -23,11 +23,11 @@ endif
 ifndef MIGRATION_NAME
 	$(error "--NAME parameter not provided for migration file.")
 endif
-	migrate create -ext sql -dir migrations $(MIGRATION_NAME)
+	migrate create -ext sql -dir db/migrations $(MIGRATION_NAME)
 
 migrate-up:
-	migrate -path migrations -database "sqlite3://daily_planet.db" up $(MIGRATION_UP)
+	migrate -path db/migrations -database "sqlite3://daily_planet.db" up $(MIGRATION_UP)
 
 
 migrate-down:
-	migrate -path migrations -database "sqlite3://daily_planet.db" down $(MIGRATION_DOWN)
+	migrate -path db/migrations -database "sqlite3://daily_planet.db" down $(MIGRATION_DOWN)
