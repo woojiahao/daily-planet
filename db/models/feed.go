@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"time"
 
-	"github.com/woojiahao/daily-planet/db"
+	"github.com/woojiahao/daily-planet/db/scanner"
 )
 
 type Feed struct {
@@ -21,7 +21,7 @@ type FeedModel struct {
 	DB *sql.DB
 }
 
-func parseFeedRow(rows db.RowScanner) (Feed, error) {
+func parseFeedRow(rows scanner.RowScanner) (Feed, error) {
 	var feed Feed
 	var disabledInt int
 	var createdAtString string
