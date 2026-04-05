@@ -24,3 +24,7 @@ func NewDatabase() (*Database, error) {
 	}
 	return &database, nil
 }
+
+type RowScanner interface {
+	Scan(dest ...any) error
+}
