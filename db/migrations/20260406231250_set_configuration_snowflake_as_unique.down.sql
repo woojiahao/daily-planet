@@ -1,0 +1,1 @@
+DROP INDEX uniq_idx_configuration_snowflake_id;
