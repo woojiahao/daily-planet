@@ -10,8 +10,11 @@ MIGRATION_DOWN := $(DOWN)
 install:
 	go mod download
 
-linux-build:
-	env GOOS=$(GOOS) GOARCH=$(GOARCH) go build -o ./out/daily-planet *.go
+build:
+	go build -o ./out/daily-planet **/*.go
+
+build-linux:
+	env GOOS=$(GOOS) GOARCH=$(GOARCH) go build -o ./out/daily-planet **/*.go
 
 run:
 	go run main.go
