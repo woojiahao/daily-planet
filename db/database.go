@@ -4,6 +4,7 @@ package db
 import (
 	"database/sql"
 
+	_ "github.com/mattn/go-sqlite3"
 	"github.com/woojiahao/daily-planet/db/models"
 )
 
@@ -12,7 +13,7 @@ type Database struct {
 	Feed          models.FeedModel
 }
 
-func NewDatabase() (*Database, error) {
+func New() (*Database, error) {
 	db, err := sql.Open("sqlite3", "sqlite3://daily_planet.db")
 	if err != nil {
 		return nil, err
