@@ -81,3 +81,34 @@ func (m ConfigurationModel) All() ([]Configuration, error) {
 
 	return configurations, nil
 }
+
+func (m ConfigurationModel) OneBySnowflakeID(snowflakeID string) (Configuration, error) {
+	query := `
+	SELECT
+		id,
+		snowflake_id,
+		type,
+		cron_schedule,
+		show_stats,
+		disabled,
+		created_at
+	FROM
+		configuration
+	WHERE
+		snowflake_id = ?;`
+	stmt, err := m.DB.Prepare(query)
+	if err != nil {
+		return Configuration{}, err
+	}
+
+	defer stmt.Close()
+
+	row := stmt.QueryRow(snowflakeID)
+
+	configuration, err := parseConfigurationRow(row)
+	if err != nil {
+		return Configuration{}, err
+	}
+
+	return configuration, nil
+}
