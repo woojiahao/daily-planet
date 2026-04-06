@@ -9,7 +9,10 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/woojiahao/daily-planet/bot/commands"
+	"github.com/woojiahao/daily-planet/db"
 )
+
+var database *db.Database
 
 func botToken() string {
 	discord_token := os.Getenv("DISCORD_TOKEN")
@@ -25,14 +28,21 @@ func interactionHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	}
 
 	commandName := i.ApplicationCommandData().Name
-	if v, ok := commands.CommandHandlerMapping[commandName]; !ok {
+	if handler, ok := commands.CommandHandlerMapping[commandName]; !ok {
 		return
 	} else {
-		v(s, i)
+		handler(s, i, database)
 	}
 }
 
 func Run() {
+	var err error
+
+	database, err = db.New()
+	if err != nil {
+		panic(err)
+	}
+
 	discord, err := discordgo.New("Bot " + botToken())
 	if err != nil {
 		panic(err)

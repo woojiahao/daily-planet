@@ -1,8 +1,11 @@
 package commands
 
-import "github.com/bwmarrin/discordgo"
+import (
+	"github.com/bwmarrin/discordgo"
+	"github.com/woojiahao/daily-planet/db"
+)
 
-type CommandHandler func(session *discordgo.Session, interaction *discordgo.InteractionCreate)
+type CommandHandler func(session *discordgo.Session, interaction *discordgo.InteractionCreate, database *db.Database)
 
 var CommandHandlerMapping = map[string]CommandHandler{
 	"ping": Ping,
