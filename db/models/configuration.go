@@ -120,7 +120,7 @@ func (m ConfigurationModel) OneBySnowflakeID(snowflakeID string) (Configuration,
 	return configuration, nil
 }
 
-func (m ConfigurationModel) Insert(snowflakeID string, commandSource CommandSource) error {
+func (m ConfigurationModel) InsertOne(snowflakeID string, commandSource CommandSource) error {
 	// Always default to a cron_schedule of once every 6 hours
 	query := `
 	INSERT INTO configuration  (
