@@ -3,18 +3,16 @@ package commands
 import (
 	"fmt"
 
-	"github.com/bwmarrin/discordgo"
 	"github.com/woojiahao/daily-planet/bot/helpers"
-	"github.com/woojiahao/daily-planet/db"
 )
 
-func ListFeed(s *discordgo.Session, i *discordgo.InteractionCreate, database *db.Database) {
-	feeds, err := database.Feed.All()
+func ListFeed(context CommandContext) {
+	feeds, err := context.Database.Feed.All()
 	if err != nil {
 		fmt.Printf("underlying err is %v\n", err)
 		helpers.SendEmbed(
-			s,
-			i,
+			context.Session,
+			context.Interaction,
 			"Failed to load feeds",
 			"The Daily Planet failed to load feeds for this source.",
 			0x5865F2,
@@ -23,8 +21,8 @@ func ListFeed(s *discordgo.Session, i *discordgo.InteractionCreate, database *db
 	}
 
 	helpers.SendEmbed(
-		s,
-		i,
+		context.Session,
+		context.Interaction,
 		"Feeds fetched",
 		fmt.Sprintf("These are the feeds for the current source: %v", feeds),
 		0x5865F2,

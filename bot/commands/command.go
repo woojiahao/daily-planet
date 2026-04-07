@@ -1,26 +1,46 @@
 package commands
 
 import (
+	"database/sql"
+
 	"github.com/bwmarrin/discordgo"
 	"github.com/woojiahao/daily-planet/db"
+	"github.com/woojiahao/daily-planet/db/models"
 )
 
-type commandSource string
-
-const (
-	commandSourceDM     commandSource = "DM"
-	commandSourceServer               = "server"
-)
-
-func getCommandSource(interaction *discordgo.InteractionCreate) commandSource {
+func GetCommandSource(interaction *discordgo.InteractionCreate, database *db.Database) (models.CommandSource, error) {
+	var currentCommandSource models.CommandSource
+	var snowflakeID string
 	if interaction.GuildID == "" {
-		return commandSourceDM
+		currentCommandSource = models.CommandSourceDM
+		snowflakeID = interaction.User.ID
+	} else {
+		currentCommandSource = models.CommandSourceServer
+		snowflakeID = interaction.GuildID
 	}
 
-	return commandSourceServer
+	// TODO(woojiahao): maybe adopt HasOne instead?
+	_, err := database.Configuration.OneBySnowflakeID(snowflakeID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			// no configuration belonging to the current command source, create one
+			database.Configuration.Insert(snowflakeID, currentCommandSource)
+		} else {
+			return "", err
+		}
+	}
+
+	return currentCommandSource, nil
 }
 
-type CommandHandler func(session *discordgo.Session, interaction *discordgo.InteractionCreate, database *db.Database)
+type CommandContext struct {
+	Session     *discordgo.Session
+	Interaction *discordgo.InteractionCreate
+	Database    *db.Database
+	Source      models.CommandSource
+}
+
+type CommandHandler func(context CommandContext)
 
 var CommandHandlerMapping = map[string]CommandHandler{
 	"ping":      Ping,

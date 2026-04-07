@@ -7,10 +7,17 @@ import (
 	"github.com/woojiahao/daily-planet/db/scanner"
 )
 
+type CommandSource string
+
+const (
+	CommandSourceDM     CommandSource = "DM"
+	CommandSourceServer CommandSource = "server"
+)
+
 type Configuration struct {
 	ID           int
 	SnowflakeID  string
-	Type         string
+	Type         CommandSource
 	CronSchedule string
 	ShowStats    bool
 	Disabled     bool
@@ -111,4 +118,35 @@ func (m ConfigurationModel) OneBySnowflakeID(snowflakeID string) (Configuration,
 	}
 
 	return configuration, nil
+}
+
+func (m ConfigurationModel) Insert(snowflakeID string, commandSource CommandSource) error {
+	// Always default to a cron_schedule of once every 6 hours
+	query := `
+	INSERT INTO configuration  (
+		snowflake_id,
+		type,
+		cron_schedule,
+		show_stats,
+		disabled
+	) VALUES (
+		?,
+		?,
+		'0 */6 * * *',
+		0,
+		0
+	);`
+	stmt, err := m.DB.Prepare(query)
+	if err != nil {
+		return err
+	}
+
+	defer stmt.Close()
+
+	_, err = stmt.Exec(snowflakeID, commandSource)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

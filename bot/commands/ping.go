@@ -1,11 +1,9 @@
 package commands
 
 import (
-	"github.com/bwmarrin/discordgo"
-	"github.com/woojiahao/daily-planet/db"
-	helpers "github.com/woojiahao/daily-planet/db/utility"
+	"github.com/woojiahao/daily-planet/bot/helpers"
 )
 
-func Ping(s *discordgo.Session, i *discordgo.InteractionCreate, database *db.Database) {
-	helpers.SendMessage(s, i, "Pong")
+func Ping(context CommandContext) {
+	helpers.SendMessage(context.Session, context.Interaction, "Pong")
 }
