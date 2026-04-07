@@ -6,7 +6,7 @@ import (
 	"github.com/woojiahao/daily-planet/bot/helpers"
 )
 
-func ListFeed(context CommandContext) {
+func ListFeeds(context CommandContext) {
 	feeds, err := context.Database.Feed.All()
 	if err != nil {
 		fmt.Printf("underlying err is %v\n", err)
