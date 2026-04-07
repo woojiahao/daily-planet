@@ -11,6 +11,7 @@ import (
 type Database struct {
 	Configuration models.ConfigurationModel
 	Feed          models.FeedModel
+	Cache         models.CacheModel
 }
 
 func New() (*Database, error) {
@@ -22,6 +23,7 @@ func New() (*Database, error) {
 	database := Database{
 		Configuration: models.ConfigurationModel{DB: db},
 		Feed:          models.FeedModel{DB: db},
+		Cache:         models.CacheModel{DB: db},
 	}
 	return &database, nil
 }
