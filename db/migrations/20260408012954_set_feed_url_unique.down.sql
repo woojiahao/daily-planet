@@ -1,0 +1,1 @@
+DROP INDEX uniq_idx_feed_configuration_id_url;
