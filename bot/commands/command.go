@@ -46,3 +46,45 @@ type CommandContext struct {
 }
 
 type CommandHandler func(context CommandContext)
+
+type CommandName string
+
+// TODO(woojiahao): the definition should actually just expand to avoid nesting structs unnecessarily
+type CommandDefinition struct {
+	Description string
+	Options     []*discordgo.ApplicationCommandOption
+}
+
+type Command struct {
+	Name        CommandName
+	Description string
+	Options     []*discordgo.ApplicationCommandOption
+	Handler     CommandHandler
+}
+
+func (c Command) ToDiscordCommand() *discordgo.ApplicationCommand {
+	return &discordgo.ApplicationCommand{
+		Name:        string(c.Name),
+		Description: c.Description,
+		Options:     c.Options,
+	}
+}
+
+var SupportedCommands = []Command{
+	Ping,
+
+	// feed related
+	ListFeeds,
+	AddFeed,
+	DeleteFeed,
+}
+
+func CommandsToNameMap(commands []Command) map[CommandName]Command {
+	var commandByName map[CommandName]Command
+
+	for _, command := range commands {
+		commandByName[command.Name] = command
+	}
+
+	return commandByName
+}

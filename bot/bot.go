@@ -23,27 +23,31 @@ func botToken() string {
 	return discord_token
 }
 
-func interactionHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	if i.Type != discordgo.InteractionApplicationCommand {
-		return
-	}
+type interactionHandler func(session *discordgo.Session, interaction *discordgo.InteractionCreate)
 
-	commandName := i.ApplicationCommandData().Name
-	if handler, ok := commands.CommandHandlerMapping[commandName]; !ok {
-		return
-	} else {
-		callerConfiguration, err := commands.GetCommandCallerConfiguration(i, database)
-		if err != nil {
-			helpers.SendMessage(s, i, "Failed to execute command. Try again later.")
+func interactionHandlerWrapper(commandMap map[commands.CommandName]commands.Command) interactionHandler {
+	return func(session *discordgo.Session, interaction *discordgo.InteractionCreate) {
+		if interaction.Type != discordgo.InteractionApplicationCommand {
 			return
 		}
-		context := commands.CommandContext{
-			Session:             s,
-			Interaction:         i,
-			Database:            database,
-			CallerConfiguration: callerConfiguration,
+
+		commandName := interaction.ApplicationCommandData().Name
+		if command, ok := commandMap[commands.CommandName(commandName)]; !ok {
+			return
+		} else {
+			callerConfiguration, err := commands.GetCommandCallerConfiguration(interaction, database)
+			if err != nil {
+				helpers.SendMessage(session, interaction, "Failed to execute command. Try again later.")
+				return
+			}
+			context := commands.CommandContext{
+				Session:             session,
+				Interaction:         interaction,
+				Database:            database,
+				CallerConfiguration: callerConfiguration,
+			}
+			command.Handler(context)
 		}
-		handler(context)
 	}
 }
 
@@ -60,15 +64,23 @@ func Run() {
 		panic(err)
 	}
 
-	discord.AddHandler(interactionHandler)
+	commandsMap := commands.CommandsToNameMap(commands.SupportedCommands)
+
+	discord.AddHandler(interactionHandlerWrapper(commandsMap))
 
 	err = discord.Open()
 	if err != nil {
 		panic(err)
 	}
 
-	for _, command := range commands.CommandDefinitions {
-		_, err = discord.ApplicationCommandCreate(discord.State.User.ID, "1455080799861870673", command)
+	for _, command := range commands.SupportedCommands {
+		_, err = discord.ApplicationCommandCreate(
+			discord.State.User.ID,
+			// TODO(woojiahao): set this as a configurable env var so that we don't hard code it in the commits
+			// no sensitive information, just to avoid hardcoding
+			"1455080799861870673",
+			command.ToDiscordCommand(),
+		)
 		if err != nil {
 			panic(err)
 		}
