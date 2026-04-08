@@ -80,7 +80,7 @@ var SupportedCommands = []Command{
 }
 
 func CommandsToNameMap(commands []Command) map[CommandName]Command {
-	var commandByName map[CommandName]Command
+	commandByName := make(map[CommandName]Command)
 
 	for _, command := range commands {
 		commandByName[command.Name] = command

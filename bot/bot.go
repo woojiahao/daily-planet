@@ -27,9 +27,7 @@ func testGuildID() string {
 	return os.Getenv("TEST_GUILD_ID")
 }
 
-type interactionHandler func(session *discordgo.Session, interaction *discordgo.InteractionCreate)
-
-func interactionHandlerWrapper(commandMap map[commands.CommandName]commands.Command) interactionHandler {
+func interactionHandlerWrapper(commandMap map[commands.CommandName]commands.Command) interface{} {
 	return func(session *discordgo.Session, interaction *discordgo.InteractionCreate) {
 		if interaction.Type != discordgo.InteractionApplicationCommand {
 			return
@@ -75,6 +73,22 @@ func Run() {
 	err = discord.Open()
 	if err != nil {
 		panic(err)
+	}
+
+	existingCommands, err := discord.ApplicationCommands(discord.State.User.ID, testGuildID())
+	if err != nil {
+		panic(err)
+	}
+
+	for _, command := range existingCommands {
+		err = discord.ApplicationCommandDelete(
+			command.ApplicationID,
+			command.GuildID,
+			command.ID,
+		)
+		if err != nil {
+			panic(err)
+		}
 	}
 
 	for _, command := range commands.SupportedCommands {
