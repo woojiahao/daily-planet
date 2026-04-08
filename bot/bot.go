@@ -16,11 +16,15 @@ import (
 var database *db.Database
 
 func botToken() string {
-	discord_token := os.Getenv("DISCORD_TOKEN")
-	if discord_token == "" {
+	discordToken := os.Getenv("DISCORD_TOKEN")
+	if discordToken == "" {
 		panic("missing DISCORD_TOKEN in environment")
 	}
-	return discord_token
+	return discordToken
+}
+
+func testGuildID() string {
+	return os.Getenv("TEST_GUILD_ID")
 }
 
 type interactionHandler func(session *discordgo.Session, interaction *discordgo.InteractionCreate)
@@ -76,9 +80,7 @@ func Run() {
 	for _, command := range commands.SupportedCommands {
 		_, err = discord.ApplicationCommandCreate(
 			discord.State.User.ID,
-			// TODO(woojiahao): set this as a configurable env var so that we don't hard code it in the commits
-			// no sensitive information, just to avoid hardcoding
-			"1455080799861870673",
+			testGuildID(),
 			command.ToDiscordCommand(),
 		)
 		if err != nil {
