@@ -20,6 +20,12 @@ func New() (*Database, error) {
 		return nil, err
 	}
 
+	// we use several FK constraints so we want to ensure that it's enabled here
+	_, err = db.Exec("PRAGMA foreign_keys = ON;")
+	if err != nil {
+		panic(err)
+	}
+
 	database := Database{
 		Configuration: models.ConfigurationModel{DB: db},
 		Feed:          models.FeedModel{DB: db},
