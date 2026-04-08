@@ -46,32 +46,3 @@ type CommandContext struct {
 }
 
 type CommandHandler func(context CommandContext)
-
-var CommandHandlerMapping = map[string]CommandHandler{
-	"ping":      Ping,
-	"list-feed": ListFeeds,
-	"add-feed":  AddFeed,
-}
-
-var CommandDefinitions = []*discordgo.ApplicationCommand{
-	{
-		Name:        "ping",
-		Description: "Check if the bot is alive",
-	},
-	{
-		Name:        "list-feed",
-		Description: "List current feed for the Daily Planet",
-	},
-	{
-		Name:        "add-feed",
-		Description: "Add a feed to the Daily Planet",
-		Options: []*discordgo.ApplicationCommandOption{
-			{
-				Type:        discordgo.ApplicationCommandOptionString,
-				Name:        "url",
-				Description: "Feed URL to add",
-				Required:    true,
-			},
-		},
-	},
-}
