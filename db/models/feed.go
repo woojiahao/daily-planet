@@ -2,6 +2,7 @@ package models
 
 import (
 	"database/sql"
+	"fmt"
 	"time"
 
 	"github.com/woojiahao/daily-planet/db/scanner"
@@ -110,7 +111,40 @@ func (m FeedModel) OneByID(id string) (Feed, error) {
 	return feed, nil
 }
 
-func (m FeedModel) AllByConfigurationID(configurationID string) ([]Feed, error) {
+func (m FeedModel) OneByConfigurationIDAndURL(configurationID int, url string) (Feed, error) {
+	query := `
+	SELECT
+		id,
+		configuration_id,
+		url,
+		feed_type,
+		cron_schedule,
+		disabled,
+		created_at
+	FROM
+		feed
+	WHERE
+		configuration_id = ?
+		AND url = ?
+	LIMIT 1;`
+	fmt.Printf("configuration id is %d and url is %s\n", configurationID, url)
+	stmt, err := m.DB.Prepare(query)
+	if err != nil {
+		return Feed{}, err
+	}
+
+	defer stmt.Close()
+	row := stmt.QueryRow(configurationID, url)
+
+	feed, err := parseFeedRow(row)
+	if err != nil {
+		return Feed{}, err
+	}
+
+	return feed, nil
+}
+
+func (m FeedModel) AllByConfigurationID(configurationID int) ([]Feed, error) {
 	query := `
 	SELECT
 		id,
@@ -150,7 +184,7 @@ func (m FeedModel) AllByConfigurationID(configurationID string) ([]Feed, error) 
 	return feeds, nil
 }
 
-func (m FeedModel) InsertOne(configurationID, url, feedType string) (Feed, error) {
+func (m FeedModel) InsertOne(configurationID int, url, feedType string) (Feed, error) {
 	// Always default to nil cron_schedule and subsequent fetches will derive from the parent configuration
 	query := `
 	INSERT INTO feed  (
@@ -182,4 +216,19 @@ func (m FeedModel) InsertOne(configurationID, url, feedType string) (Feed, error
 
 	row := stmt.QueryRow(configurationID, url, feedType)
 	return parseFeedRow(row)
+}
+
+func (m FeedModel) DeleteOneByID(id int) error {
+	query := `
+	DELETE FROM feed
+	WHERE id = ?;`
+	stmt, err := m.DB.Prepare(query)
+	if err != nil {
+		return err
+	}
+
+	defer stmt.Close()
+
+	_, err = stmt.Exec(id)
+	return err
 }
