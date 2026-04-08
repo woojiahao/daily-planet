@@ -12,7 +12,7 @@ type Feed struct {
 	ConfigurationID int
 	URL             string
 	FeedType        string
-	CronSchedule    string
+	CronSchedule    sql.NullString
 	Disabled        bool
 	CreatedAt       time.Time
 }
@@ -148,4 +148,38 @@ func (m FeedModel) AllByConfigurationID(configurationID string) ([]Feed, error) 
 	}
 
 	return feeds, nil
+}
+
+func (m FeedModel) InsertOne(configurationID, url, feedType string) (Feed, error) {
+	// Always default to nil cron_schedule and subsequent fetches will derive from the parent configuration
+	query := `
+	INSERT INTO feed  (
+		configuration_id,
+		url,
+		feed_type,
+		cron_schedule,
+		disabled
+	) VALUES (
+		?,
+		?,
+		?,
+		NULL,
+		0
+	) RETURNING 
+		id,
+		configuration_id,
+		url,
+		feed_type,
+		cron_schedule,
+		disabled,
+		created_at;`
+	stmt, err := m.DB.Prepare(query)
+	if err != nil {
+		return Feed{}, err
+	}
+
+	defer stmt.Close()
+
+	row := stmt.QueryRow(configurationID, url, feedType)
+	return parseFeedRow(row)
 }
