@@ -38,7 +38,7 @@ var AddFeed = Command{
 			return
 		}
 
-		dbFeed, err := context.Database.Feed.InsertOne(context.CallerConfiguration.SnowflakeID, url, string(feed.EngineType))
+		dbFeed, err := context.Database.Feed.InsertOne(context.CallerConfiguration.ID, url, string(feed.EngineType))
 		if err != nil {
 			fmt.Printf("err is %v\n", err)
 			helpers.SendEmbed(
