@@ -85,39 +85,37 @@ func (feed Feed) GetKey() FeedKey {
 // Atom feeds contain the &lt;feed&gt; root element.
 //
 // JSON feeds are just JSON files.
-//
-// If any errors occur during the loading, we discard the feed entirely without logging.
-func LoadFeed(feedURL string) Feed {
+func LoadFeed(feedURL string) (Feed, error) {
 	// TODO(woojiahao): Log when feeds fail to load
 
 	resp, err := http.Get(feedURL)
 	if err != nil {
-		return Feed{}
+		return Feed{}, err
 	}
 
 	defer resp.Body.Close()
 
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return Feed{}
+		return Feed{}, err
 	}
 
 	// Load RSS -> Atom -> JSON in that order
 	// TODO(woojiahao): Clean up this parsing logic since we might want to directly detect the file type
 	rss, err := parseRSS(respBody)
 	if err == nil && rss.Channel.Title != "" {
-		return rss.Channel.toFeed()
+		return rss.Channel.toFeed(), nil
 	}
 
 	atom, err := parseAtom(respBody)
 	if err == nil && atom.Title != "" {
-		return atom.toFeed()
+		return atom.toFeed(), nil
 	}
 
 	json, err := parseJSON(respBody)
 	if err == nil && json.Title != "" {
-		return json.toFeed()
+		return json.toFeed(), nil
 	}
 
-	return Feed{}
+	return Feed{}, fmt.Errorf("failed to load feed, not types RSS, Atom, or JSON")
 }
