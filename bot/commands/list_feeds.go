@@ -15,7 +15,7 @@ func ListFeeds(context CommandContext) {
 			context.Interaction,
 			"Failed to load feeds",
 			"The Daily Planet failed to load feeds for this source.",
-			0x5865F2,
+			helpers.ColorRed,
 		)
 		return
 	}
@@ -25,6 +25,6 @@ func ListFeeds(context CommandContext) {
 		context.Interaction,
 		"Feeds fetched",
 		fmt.Sprintf("These are the feeds for the current source: %v", feeds),
-		0x5865F2,
+		helpers.ColorBlue,
 	)
 }

@@ -8,7 +8,7 @@ import (
 	"github.com/woojiahao/daily-planet/db/models"
 )
 
-func GetCommandSource(interaction *discordgo.InteractionCreate, database *db.Database) (models.CommandSource, error) {
+func GetCommandCallerConfiguration(interaction *discordgo.InteractionCreate, database *db.Database) (models.Configuration, error) {
 	var currentCommandSource models.CommandSource
 	var snowflakeID string
 	if interaction.GuildID == "" {
@@ -19,32 +19,38 @@ func GetCommandSource(interaction *discordgo.InteractionCreate, database *db.Dat
 		snowflakeID = interaction.GuildID
 	}
 
-	// TODO(woojiahao): maybe adopt HasOne instead?
-	_, err := database.Configuration.OneBySnowflakeID(snowflakeID)
+	configuration, err := database.Configuration.OneBySnowflakeID(snowflakeID)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			// no configuration belonging to the current command source, create one
-			database.Configuration.Insert(snowflakeID, currentCommandSource)
+			database.Configuration.InsertOne(snowflakeID, currentCommandSource)
+			configuration, err := database.Configuration.OneBySnowflakeID(snowflakeID)
+			if err != nil {
+				return models.Configuration{}, err
+			}
+
+			return configuration, nil
 		} else {
-			return "", err
+			return models.Configuration{}, err
 		}
 	}
 
-	return currentCommandSource, nil
+	return configuration, nil
 }
 
 type CommandContext struct {
-	Session     *discordgo.Session
-	Interaction *discordgo.InteractionCreate
-	Database    *db.Database
-	Source      models.CommandSource
+	Session             *discordgo.Session
+	Interaction         *discordgo.InteractionCreate
+	Database            *db.Database
+	CallerConfiguration models.Configuration
 }
 
 type CommandHandler func(context CommandContext)
 
 var CommandHandlerMapping = map[string]CommandHandler{
 	"ping":      Ping,
-	"list-feed": ListFeed,
+	"list-feed": ListFeeds,
+	"add-feed":  AddFeed,
 }
 
 var CommandDefinitions = []*discordgo.ApplicationCommand{
@@ -55,5 +61,17 @@ var CommandDefinitions = []*discordgo.ApplicationCommand{
 	{
 		Name:        "list-feed",
 		Description: "List current feed for the Daily Planet",
+	},
+	{
+		Name:        "add-feed",
+		Description: "Add a feed to the Daily Planet",
+		Options: []*discordgo.ApplicationCommandOption{
+			{
+				Type:        discordgo.ApplicationCommandOptionString,
+				Name:        "url",
+				Description: "Feed URL to add",
+				Required:    true,
+			},
+		},
 	},
 }

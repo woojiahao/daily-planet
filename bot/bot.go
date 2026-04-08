@@ -1,8 +1,8 @@
 // Package bot contains the implementation for the Discord bot aspects of daily planet.
 package bot
 
-	"fmt"
 import (
+	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
@@ -32,16 +32,16 @@ func interactionHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	if handler, ok := commands.CommandHandlerMapping[commandName]; !ok {
 		return
 	} else {
-		commandSource, err := commands.GetCommandSource(i, database)
+		callerConfiguration, err := commands.GetCommandCallerConfiguration(i, database)
 		if err != nil {
 			helpers.SendMessage(s, i, "Failed to execute command. Try again later.")
 			return
 		}
 		context := commands.CommandContext{
-			Session:     s,
-			Interaction: i,
-			Database:    database,
-			Source:      commandSource,
+			Session:             s,
+			Interaction:         i,
+			Database:            database,
+			CallerConfiguration: callerConfiguration,
 		}
 		handler(context)
 	}
