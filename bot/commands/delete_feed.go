@@ -20,47 +20,36 @@ var DeleteFeed = Command{
 			Required:    true,
 		},
 	},
-	Handler: func(context CommandContext) {
+	Handler: func(context CommandContext) *discordgo.InteractionResponse {
 		// TODO(woojiahao): wrap these in a transaction instead of separating the API calls
 		url := strings.Trim(context.Interaction.ApplicationCommandData().Options[0].StringValue(), " ")
 
 		feed, err := context.Database.Feed.OneByConfigurationIDAndURL(context.CallerConfiguration.ID, url)
 		if err != nil {
 			if err == sql.ErrNoRows {
-				helpers.SendEmbed(
-					context.Session,
-					context.Interaction,
+				return helpers.CreateEmbed(
 					"Feed not found",
 					fmt.Sprintf("Failed to fetch feed by URL %s as it does not exist.\n\nUse /list-feeds to verify that it exists in this source.", url),
 					helpers.ColorRed,
 				)
-			} else {
-				helpers.SendEmbed(
-					context.Session,
-					context.Interaction,
-					"Failed to fetch feed",
-					fmt.Sprintf("Failed to fetch feed by URL %s. Try again", url),
-					helpers.ColorRed,
-				)
 			}
-			return
+			return helpers.CreateEmbed(
+				"Failed to fetch feed",
+				fmt.Sprintf("Failed to fetch feed by URL %s. Try again", url),
+				helpers.ColorRed,
+			)
 		}
 
 		err = context.Database.Feed.DeleteOneByID(feed.ID)
 		if err != nil {
-			helpers.SendEmbed(
-				context.Session,
-				context.Interaction,
+			return helpers.CreateEmbed(
 				"Failed to delete feed",
 				fmt.Sprintf("Failed to delete feed by URL %s. Try again", url),
 				helpers.ColorRed,
 			)
-			return
 		}
 
-		helpers.SendEmbed(
-			context.Session,
-			context.Interaction,
+		return helpers.CreateEmbed(
 			"Feed deleted",
 			fmt.Sprintf("Feed %s has been deleted from this source", url),
 			helpers.ColorGreen,

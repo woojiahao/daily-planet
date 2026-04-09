@@ -48,7 +48,11 @@ func interactionHandlerWrapper(commandMap map[commands.CommandName]commands.Comm
 				Database:            database,
 				CallerConfiguration: callerConfiguration,
 			}
-			command.Handler(context)
+			response := command.Handler(context)
+			if response != nil {
+				// printing response, else assume that the handler did something already
+				session.InteractionRespond(interaction.Interaction, response)
+			}
 		}
 	}
 }

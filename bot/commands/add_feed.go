@@ -20,7 +20,7 @@ var AddFeed = Command{
 			Required:    true,
 		},
 	},
-	Handler: func(context CommandContext) {
+	Handler: func(context CommandContext) *discordgo.InteractionResponse {
 		// TODO(woojiahao): wrap these in a transaction instead of separating the API calls
 		url := strings.Trim(context.Interaction.ApplicationCommandData().Options[0].StringValue(), " ")
 
@@ -28,27 +28,21 @@ var AddFeed = Command{
 		feed, err := source.LoadFeed(url)
 		if err != nil {
 			fmt.Printf("err is %v\n", err)
-			helpers.SendEmbed(
-				context.Session,
-				context.Interaction,
+			return helpers.CreateEmbed(
 				"Feed could not be loaded",
 				fmt.Sprintf("Failed to load feed %s into source.\nVerify that the feed is well-formed.", url),
 				helpers.ColorRed,
 			)
-			return
 		}
 
 		dbFeed, err := context.Database.Feed.InsertOne(context.CallerConfiguration.ID, url, string(feed.EngineType))
 		if err != nil {
 			fmt.Printf("err is %v\n", err)
-			helpers.SendEmbed(
-				context.Session,
-				context.Interaction,
+			return helpers.CreateEmbed(
 				"Feed NOT added",
 				fmt.Sprintf("Failed to add feed %s to source. Try again.", url),
 				helpers.ColorRed,
 			)
-			return
 		}
 
 		var configurationIDs []int
@@ -63,19 +57,14 @@ var AddFeed = Command{
 		err = context.Database.Cache.InsertMany(configurationIDs, feedIDs, articleKeys)
 		if err != nil {
 			fmt.Printf("err is %v\n", err)
-			helpers.SendEmbed(
-				context.Session,
-				context.Interaction,
+			return helpers.CreateEmbed(
 				"Feed NOT added",
 				"Failed to load feed articles into cache",
 				helpers.ColorRed,
 			)
-			return
 		}
 
-		helpers.SendEmbed(
-			context.Session,
-			context.Interaction,
+		return helpers.CreateEmbed(
 			"Feed added",
 			fmt.Sprintf("Added feed %s to source", url),
 			helpers.ColorGreen,

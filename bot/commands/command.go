@@ -45,7 +45,7 @@ type CommandContext struct {
 	CallerConfiguration models.Configuration
 }
 
-type CommandHandler func(context CommandContext)
+type CommandHandler func(context CommandContext) *discordgo.InteractionResponse
 
 type CommandName string
 

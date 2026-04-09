@@ -5,6 +5,30 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
+func CreateMessage(content string) *discordgo.InteractionResponse {
+	return &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseChannelMessageWithSource,
+		Data: &discordgo.InteractionResponseData{
+			Content: content,
+		},
+	}
+}
+
+func CreateEmbed(title, description string, color Color) *discordgo.InteractionResponse {
+	return &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseChannelMessageWithSource,
+		Data: &discordgo.InteractionResponseData{
+			Embeds: []*discordgo.MessageEmbed{
+				{
+					Title:       title,
+					Description: description,
+					Color:       int(color),
+				},
+			},
+		},
+	}
+}
+
 func SendMessage(s *discordgo.Session, i *discordgo.InteractionCreate, content string) {
 	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
@@ -27,7 +51,4 @@ func SendEmbed(s *discordgo.Session, i *discordgo.InteractionCreate, title, desc
 			},
 		},
 	})
-}
-
-func foo() {
 }
