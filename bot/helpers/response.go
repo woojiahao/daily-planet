@@ -29,6 +29,17 @@ func CreateEmbed(title, description string, color Color) *discordgo.InteractionR
 	}
 }
 
+func CreateModal(customID, title string, components []discordgo.MessageComponent) *discordgo.InteractionResponse {
+	return &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseModal,
+		Data: &discordgo.InteractionResponseData{
+			CustomID:   customID,
+			Title:      title,
+			Components: components,
+		},
+	}
+}
+
 func SendMessage(s *discordgo.Session, i *discordgo.InteractionCreate, content string) {
 	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,

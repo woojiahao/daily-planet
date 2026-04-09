@@ -77,6 +77,7 @@ var SupportedCommands = []Command{
 	ListFeeds,
 	AddFeed,
 	DeleteFeed,
+	EditFeed,
 }
 
 func CommandsToNameMap(commands []Command) map[CommandName]Command {

@@ -49,9 +49,13 @@ func interactionHandlerWrapper(commandMap map[commands.CommandName]commands.Comm
 				CallerConfiguration: callerConfiguration,
 			}
 			response := command.Handler(context)
+			fmt.Printf("hi %v\n", response)
 			if response != nil {
 				// printing response, else assume that the handler did something already
-				session.InteractionRespond(interaction.Interaction, response)
+				err = session.InteractionRespond(interaction.Interaction, response)
+				if err != nil {
+					fmt.Printf("err is %v\n", err)
+				}
 			}
 		}
 	}
