@@ -45,7 +45,10 @@ type CommandContext struct {
 	CallerConfiguration models.Configuration
 }
 
-type CommandHandler func(context CommandContext) *discordgo.InteractionResponse
+type (
+	CommandHandler            func(context CommandContext) *discordgo.InteractionResponse
+	CommandModalSubmitHandler func(context CommandContext) *discordgo.InteractionResponse
+)
 
 type CommandName string
 
@@ -56,10 +59,11 @@ type CommandDefinition struct {
 }
 
 type Command struct {
-	Name        CommandName
-	Description string
-	Options     []*discordgo.ApplicationCommandOption
-	Handler     CommandHandler
+	Name               CommandName
+	Description        string
+	Options            []*discordgo.ApplicationCommandOption
+	Handler            CommandHandler
+	ModalSubmitHandler CommandModalSubmitHandler
 }
 
 func (c Command) ToDiscordCommand() *discordgo.ApplicationCommand {
