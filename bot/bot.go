@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
 	"github.com/bwmarrin/discordgo"
@@ -29,34 +30,51 @@ func testGuildID() string {
 
 func interactionHandlerWrapper(commandMap map[commands.CommandName]commands.Command) interface{} {
 	return func(session *discordgo.Session, interaction *discordgo.InteractionCreate) {
-		if interaction.Type != discordgo.InteractionApplicationCommand {
-			return
+		callerConfiguration, err := commands.GetCommandCallerConfiguration(interaction, database)
+		context := commands.CommandContext{
+			Session:             session,
+			Interaction:         interaction,
+			Database:            database,
+			CallerConfiguration: callerConfiguration,
 		}
 
-		commandName := interaction.ApplicationCommandData().Name
-		if command, ok := commandMap[commands.CommandName(commandName)]; !ok {
-			return
-		} else {
-			callerConfiguration, err := commands.GetCommandCallerConfiguration(interaction, database)
-			if err != nil {
-				helpers.SendMessage(session, interaction, "Failed to execute command. Try again later.")
-				return
-			}
-			context := commands.CommandContext{
-				Session:             session,
-				Interaction:         interaction,
-				Database:            database,
-				CallerConfiguration: callerConfiguration,
-			}
-			response := command.Handler(context)
-			fmt.Printf("hi %v\n", response)
-			if response != nil {
-				// printing response, else assume that the handler did something already
-				err = session.InteractionRespond(interaction.Interaction, response)
+		switch interaction.Type {
+		case discordgo.InteractionApplicationCommand:
+			commandName := interaction.ApplicationCommandData().Name
+			if command, ok := commandMap[commands.CommandName(commandName)]; ok {
 				if err != nil {
-					fmt.Printf("err is %v\n", err)
+					helpers.SendMessage(session, interaction, "Failed to execute command. Try again later.")
+					return
+				}
+				response := command.Handler(context)
+				if response != nil {
+					// printing response, else assume that the handler did something already
+					err = session.InteractionRespond(interaction.Interaction, response)
+					if err != nil {
+						// TODO(woojiahao): maybe print something
+						fmt.Printf("err is %v\n", err)
+					}
 				}
 			}
+
+		case discordgo.InteractionModalSubmit:
+			data := context.Interaction.ModalSubmitData()
+			commandName := strings.Split(data.CustomID, ":")[0]
+			if command, ok := commandMap[commands.CommandName(commandName)]; ok {
+				if command.ModalSubmitHandler != nil {
+					response := command.ModalSubmitHandler(context)
+					if response != nil {
+						err = session.InteractionRespond(interaction.Interaction, response)
+						if err != nil {
+							// TODO(woojiahao): maybe print something
+							fmt.Printf("err is %v\n", err)
+						}
+					}
+				}
+			}
+
+		default:
+			return
 		}
 	}
 }
