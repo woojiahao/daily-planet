@@ -25,13 +25,13 @@ var EnableFeed = Command{
 		feed, err := context.Database.Feed.OneByConfigurationIDAndURL(context.CallerConfiguration.ID, url)
 		if err != nil {
 			if err == sql.ErrNoRows {
-				return helpers.CreateEmbed(
+				return helpers.CreateSimpleEmbed(
 					"Feed not found",
 					fmt.Sprintf("Failed to fetch feed by URL %s as it does not exist.\n\nUse /list-feeds to verify that it exists in this source.", url),
 					helpers.ColorRed,
 				)
 			}
-			return helpers.CreateEmbed(
+			return helpers.CreateSimpleEmbed(
 				"Failed to fetch feed",
 				fmt.Sprintf("Failed to fetch feed by URL %s. Try again", url),
 				helpers.ColorRed,
@@ -40,14 +40,14 @@ var EnableFeed = Command{
 
 		err = context.Database.Feed.UpdateOneByID(feed.ID, false)
 		if err != nil {
-			return helpers.CreateEmbed(
+			return helpers.CreateSimpleEmbed(
 				"Failed to enable feed",
 				fmt.Sprintf("Failed to enable feed by URL %s. Try again", url),
 				helpers.ColorRed,
 			)
 		}
 
-		return helpers.CreateEmbed(
+		return helpers.CreateSimpleEmbed(
 			"Feed enabled",
 			fmt.Sprintf("Feed %s enabled", url),
 			helpers.ColorGreen,

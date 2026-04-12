@@ -28,13 +28,13 @@ var DeleteFeed = Command{
 		feed, err := context.Database.Feed.OneByConfigurationIDAndURL(context.CallerConfiguration.ID, url)
 		if err != nil {
 			if err == sql.ErrNoRows {
-				return helpers.CreateEmbed(
+				return helpers.CreateSimpleEmbed(
 					"Feed not found",
 					fmt.Sprintf("Failed to fetch feed by URL %s as it does not exist.\n\nUse /list-feeds to verify that it exists in this source.", url),
 					helpers.ColorRed,
 				)
 			}
-			return helpers.CreateEmbed(
+			return helpers.CreateSimpleEmbed(
 				"Failed to fetch feed",
 				fmt.Sprintf("Failed to fetch feed by URL %s. Try again", url),
 				helpers.ColorRed,
@@ -43,14 +43,14 @@ var DeleteFeed = Command{
 
 		err = context.Database.Feed.DeleteOneByID(feed.ID)
 		if err != nil {
-			return helpers.CreateEmbed(
+			return helpers.CreateSimpleEmbed(
 				"Failed to delete feed",
 				fmt.Sprintf("Failed to delete feed by URL %s. Try again", url),
 				helpers.ColorRed,
 			)
 		}
 
-		return helpers.CreateEmbed(
+		return helpers.CreateSimpleEmbed(
 			"Feed deleted",
 			fmt.Sprintf("Feed %s has been deleted from this source", url),
 			helpers.ColorGreen,
