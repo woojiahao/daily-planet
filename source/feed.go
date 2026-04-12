@@ -122,7 +122,7 @@ func LoadFeed(feedURL string) (Feed, error) {
 	return Feed{}, fmt.Errorf("failed to load feed, not types RSS, Atom, or JSON")
 }
 
-func BulkLoadFeeds(feedURLs []string) ([]Feed, error) {
+func BulkLoadFeeds(feedURLs []string) []Feed {
 	workers := runtime.NumCPU() * 4
 	n := len(feedURLs)
 
@@ -176,5 +176,5 @@ func BulkLoadFeeds(feedURLs []string) ([]Feed, error) {
 		feeds = append(feeds, feed)
 	}
 
-	return feeds, nil
+	return feeds
 }

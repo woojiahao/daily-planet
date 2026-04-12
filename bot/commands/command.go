@@ -78,6 +78,7 @@ var SupportedCommands = []Command{
 	DisableFeed,
 	EnableFeed,
 	FetchFeed,
+	FetchFeeds,
 }
 
 func CommandsToNameMap(commands []Command) map[CommandName]Command {
