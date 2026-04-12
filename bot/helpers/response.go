@@ -14,16 +14,30 @@ func CreateMessage(content string) *discordgo.InteractionResponse {
 	}
 }
 
-func CreateEmbed(title, description string, color Color) *discordgo.InteractionResponse {
+type Embed struct {
+	Title       string
+	Description string
+	Color       Color
+	Fields      []*discordgo.MessageEmbedField
+	Footer      *discordgo.MessageEmbedFooter
+}
+
+func (e Embed) toMessageEmbed() *discordgo.MessageEmbed {
+	return &discordgo.MessageEmbed{
+		Title:       e.Title,
+		Description: e.Description,
+		Color:       int(e.Color),
+		Fields:      e.Fields,
+		Footer:      e.Footer,
+	}
+}
+
+func CreateEmbed(embed Embed) *discordgo.InteractionResponse {
 	return &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
 		Data: &discordgo.InteractionResponseData{
 			Embeds: []*discordgo.MessageEmbed{
-				{
-					Title:       title,
-					Description: description,
-					Color:       int(color),
-				},
+				embed.toMessageEmbed(),
 			},
 		},
 	}
@@ -54,8 +68,8 @@ func CreateEphemeralMessage(content string) *discordgo.InteractionResponse {
 	return createEphemeralResponse(CreateMessage(content))
 }
 
-func CreateEphemeralEmbed(title, description string, color Color) *discordgo.InteractionResponse {
-	return createEphemeralResponse(CreateEmbed(title, description, color))
+func CreateEphemeralEmbed(embed Embed) *discordgo.InteractionResponse {
+	return createEphemeralResponse(CreateEmbed(embed))
 }
 
 func CreateEphemeralModal(customID, title string, components []discordgo.MessageComponent) *discordgo.InteractionResponse {
@@ -71,8 +85,8 @@ func createEphemeralResponse(response *discordgo.InteractionResponse) *discordgo
 	return response
 }
 
-func SendMessage(s *discordgo.Session, i *discordgo.InteractionCreate, content string) {
-	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+func SendMessage(session *discordgo.Session, interaction *discordgo.InteractionCreate, content string) {
+	session.InteractionRespond(interaction.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
 		Data: &discordgo.InteractionResponseData{
 			Content: content,
@@ -80,16 +94,12 @@ func SendMessage(s *discordgo.Session, i *discordgo.InteractionCreate, content s
 	})
 }
 
-func SendEmbed(s *discordgo.Session, i *discordgo.InteractionCreate, title, description string, color Color) {
-	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+func SendEmbed(session *discordgo.Session, interaction *discordgo.InteractionCreate, embed Embed) {
+	session.InteractionRespond(interaction.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
 		Data: &discordgo.InteractionResponseData{
 			Embeds: []*discordgo.MessageEmbed{
-				{
-					Title:       title,
-					Description: description,
-					Color:       int(color),
-				},
+				embed.toMessageEmbed(),
 			},
 		},
 	})
