@@ -59,6 +59,10 @@ func NewFeedKey(configurationID ConfigurationID, url string) FeedKey {
 	return FeedKey(*ds.NewPair(configurationID, url))
 }
 
+func (f Feed) Key() FeedKey {
+	return NewFeedKey(f.ConfigurationID, f.URL)
+}
+
 func (m FeedModel) All() ([]Feed, error) {
 	query := `
 	SELECT

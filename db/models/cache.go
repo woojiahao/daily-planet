@@ -54,6 +54,10 @@ func NewCacheKey(configurationID ConfigurationID, feedID FeedID) CacheKey {
 	return CacheKey(*ds.NewPair(configurationID, feedID))
 }
 
+func (c Cache) Key() CacheKey {
+	return NewCacheKey(c.ConfigurationID, c.FeedID)
+}
+
 func (m CacheModel) InsertOne(cacheKey CacheKey, articleKey string) error {
 	query := `
 	INSERT INTO cache (
