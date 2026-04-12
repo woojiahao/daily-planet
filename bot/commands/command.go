@@ -83,6 +83,7 @@ var SupportedCommands = []Command{
 	// configuration related
 	EditCronSchedule,
 	DisableConfiguration,
+	EnableConfiguration,
 }
 
 func CommandsToNameMap(commands []Command) map[CommandName]Command {

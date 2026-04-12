@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/woojiahao/daily-planet/db/helpers"
 	"github.com/woojiahao/daily-planet/db/scanner"
 )
 
@@ -171,12 +172,14 @@ func (m ConfigurationModel) UpdateOneByID(id ConfigurationID, cronSchedule *stri
 
 	if showStats != nil {
 		setClauses = append(setClauses, "show_stats = ?")
-		args = append(args, *showStats)
+		showStatsInt := helpers.BoolToInt(*showStats)
+		args = append(args, showStatsInt)
 	}
 
 	if disabled != nil {
 		setClauses = append(setClauses, "disabled = ?")
-		args = append(args, *disabled)
+		disabledInt := helpers.BoolToInt(*disabled)
+		args = append(args, disabledInt)
 	}
 
 	query += strings.Join(setClauses, ", ") + " WHERE id = ?"
