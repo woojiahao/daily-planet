@@ -8,7 +8,6 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/woojiahao/daily-planet/bot/context"
 	"github.com/woojiahao/daily-planet/bot/helpers"
-	"github.com/woojiahao/daily-planet/ds"
 	"github.com/woojiahao/daily-planet/source"
 )
 
@@ -61,20 +60,7 @@ var FetchFeed = Command{
 			)
 		}
 
-		cachedArticleKeys := ds.NewSet[source.ArticleKey]()
-		for _, article := range cachedArticles {
-			cachedArticleKeys.Add(source.ArticleKey(article.ArticleKey))
-		}
-
-		var newArticles []source.Article
-		var newArticleKeys []string
-		for _, article := range feed.Articles {
-			if !cachedArticleKeys.Contains(article.GetKey()) {
-				// new article to cache and print
-				newArticles = append(newArticles, article)
-				newArticleKeys = append(newArticleKeys, string(article.GetKey()))
-			}
-		}
+		newArticles, newArticleKeys := helpers.FetchNewArticles(feed, cachedArticles)
 
 		err = context.Database.Cache.InsertManyWithSameConfigurationIDAndFeedID(
 			context.CallerConfiguration.ID,
