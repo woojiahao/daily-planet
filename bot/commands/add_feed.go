@@ -56,16 +56,12 @@ var AddFeed = Command{
 			)
 		}
 
-		var configurationIDs []int
-		var feedIDs []int
 		var articleKeys []string
 		// for all articles, bulk insert them into the cache
 		for _, article := range feed.Articles {
-			configurationIDs = append(configurationIDs, context.CallerConfiguration.ID)
-			feedIDs = append(feedIDs, dbFeed.ID)
 			articleKeys = append(articleKeys, string(article.GetKey()))
 		}
-		err = context.Database.Cache.InsertMany(configurationIDs, feedIDs, articleKeys)
+		err = context.Database.Cache.InsertManyWithSameConfigurationIDAndFeedID(context.CallerConfiguration.ID, dbFeed.ID, articleKeys)
 		if err != nil {
 			fmt.Printf("err is %v\n", err)
 			return helpers.CreateSimpleEmbed(
