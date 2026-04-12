@@ -2,16 +2,21 @@ package models
 
 import (
 	"database/sql"
-	"fmt"
 	"time"
 
 	"github.com/woojiahao/daily-planet/db/helpers"
 	"github.com/woojiahao/daily-planet/db/scanner"
+	"github.com/woojiahao/daily-planet/ds"
+)
+
+type (
+	FeedID  int
+	FeedKey ds.Pair[ConfigurationID, string]
 )
 
 type Feed struct {
-	ID              int
-	ConfigurationID int
+	ID              FeedID
+	ConfigurationID ConfigurationID
 	URL             string
 	FeedType        string
 	CronSchedule    sql.NullString
@@ -50,6 +55,10 @@ func parseFeedRow(rows scanner.RowScanner) (Feed, error) {
 	return feed, nil
 }
 
+func NewFeedKey(configurationID ConfigurationID, url string) FeedKey {
+	return FeedKey(*ds.NewPair(configurationID, url))
+}
+
 func (m FeedModel) All() ([]Feed, error) {
 	query := `
 	SELECT
@@ -81,7 +90,7 @@ func (m FeedModel) All() ([]Feed, error) {
 	return feeds, nil
 }
 
-func (m FeedModel) OneByID(id string) (Feed, error) {
+func (m FeedModel) AllEnabled() ([]Feed, error) {
 	query := `
 	SELECT
 		id,
@@ -94,58 +103,27 @@ func (m FeedModel) OneByID(id string) (Feed, error) {
 	FROM
 		feed
 	WHERE
-		id = ?
-	LIMIT 1;`
-	stmt, err := m.DB.Prepare(query)
+		disabled = 0;`
+	rows, err := m.DB.Query(query)
 	if err != nil {
-		return Feed{}, err
+		return nil, err
 	}
 
-	defer stmt.Close()
-	row := stmt.QueryRow(id)
+	defer rows.Close()
 
-	feed, err := parseFeedRow(row)
-	if err != nil {
-		return Feed{}, err
+	var feeds []Feed
+	for rows.Next() {
+		feed, err := parseFeedRow(rows)
+		if err != nil {
+			return nil, err
+		}
+		feeds = append(feeds, feed)
 	}
 
-	return feed, nil
+	return feeds, nil
 }
 
-func (m FeedModel) OneByConfigurationIDAndURL(configurationID int, url string) (Feed, error) {
-	query := `
-	SELECT
-		id,
-		configuration_id,
-		url,
-		feed_type,
-		cron_schedule,
-		disabled,
-		created_at
-	FROM
-		feed
-	WHERE
-		configuration_id = ?
-		AND url = ?
-	LIMIT 1;`
-	fmt.Printf("configuration id is %d and url is %s\n", configurationID, url)
-	stmt, err := m.DB.Prepare(query)
-	if err != nil {
-		return Feed{}, err
-	}
-
-	defer stmt.Close()
-	row := stmt.QueryRow(configurationID, url)
-
-	feed, err := parseFeedRow(row)
-	if err != nil {
-		return Feed{}, err
-	}
-
-	return feed, nil
-}
-
-func (m FeedModel) AllByConfigurationID(configurationID int) ([]Feed, error) {
+func (m FeedModel) AllByConfigurationID(configurationID ConfigurationID) ([]Feed, error) {
 	query := `
 	SELECT
 		id,
@@ -185,7 +163,70 @@ func (m FeedModel) AllByConfigurationID(configurationID int) ([]Feed, error) {
 	return feeds, nil
 }
 
-func (m FeedModel) InsertOne(configurationID int, url, feedType string) (Feed, error) {
+func (m FeedModel) OneByID(id FeedID) (Feed, error) {
+	query := `
+	SELECT
+		id,
+		configuration_id,
+		url,
+		feed_type,
+		cron_schedule,
+		disabled,
+		created_at
+	FROM
+		feed
+	WHERE
+		id = ?
+	LIMIT 1;`
+	stmt, err := m.DB.Prepare(query)
+	if err != nil {
+		return Feed{}, err
+	}
+
+	defer stmt.Close()
+	row := stmt.QueryRow(id)
+
+	feed, err := parseFeedRow(row)
+	if err != nil {
+		return Feed{}, err
+	}
+
+	return feed, nil
+}
+
+func (m FeedModel) OneByKey(key FeedKey) (Feed, error) {
+	query := `
+	SELECT
+		id,
+		configuration_id,
+		url,
+		feed_type,
+		cron_schedule,
+		disabled,
+		created_at
+	FROM
+		feed
+	WHERE
+		configuration_id = ?
+		AND url = ?
+	LIMIT 1;`
+	stmt, err := m.DB.Prepare(query)
+	if err != nil {
+		return Feed{}, err
+	}
+
+	defer stmt.Close()
+	row := stmt.QueryRow(key.First, key.Second)
+
+	feed, err := parseFeedRow(row)
+	if err != nil {
+		return Feed{}, err
+	}
+
+	return feed, nil
+}
+
+func (m FeedModel) InsertOne(configurationID ConfigurationID, url, feedType string) (Feed, error) {
 	// Always default to nil cron_schedule and subsequent fetches will derive from the parent configuration
 	query := `
 	INSERT INTO feed  (
@@ -219,7 +260,7 @@ func (m FeedModel) InsertOne(configurationID int, url, feedType string) (Feed, e
 	return parseFeedRow(row)
 }
 
-func (m FeedModel) DeleteOneByID(id int) error {
+func (m FeedModel) DeleteOneByID(id FeedID) error {
 	query := `
 	DELETE FROM feed
 	WHERE id = ?;`
@@ -234,7 +275,7 @@ func (m FeedModel) DeleteOneByID(id int) error {
 	return err
 }
 
-func (m FeedModel) UpdateOneByID(id int, disabled bool) error {
+func (m FeedModel) UpdateOneByID(id FeedID, disabled bool) error {
 	query := `
 	UPDATE feed
 	SET

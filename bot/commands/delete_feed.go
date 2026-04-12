@@ -8,6 +8,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/woojiahao/daily-planet/bot/context"
 	"github.com/woojiahao/daily-planet/bot/helpers"
+	"github.com/woojiahao/daily-planet/db/models"
 )
 
 var DeleteFeed = Command{
@@ -25,7 +26,7 @@ var DeleteFeed = Command{
 		// TODO(woojiahao): wrap these in a transaction instead of separating the API calls
 		url := strings.Trim(context.Interaction.ApplicationCommandData().Options[0].StringValue(), " ")
 
-		feed, err := context.Database.Feed.OneByConfigurationIDAndURL(context.CallerConfiguration.ID, url)
+		feed, err := context.Database.Feed.OneByKey(models.NewFeedKey(context.CallerConfiguration.ID, url))
 		if err != nil {
 			if err == sql.ErrNoRows {
 				return helpers.CreateSimpleEmbed(

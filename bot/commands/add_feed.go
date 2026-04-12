@@ -8,6 +8,7 @@ import (
 	"github.com/mattn/go-sqlite3"
 	"github.com/woojiahao/daily-planet/bot/context"
 	"github.com/woojiahao/daily-planet/bot/helpers"
+	"github.com/woojiahao/daily-planet/db/models"
 	"github.com/woojiahao/daily-planet/source"
 )
 
@@ -61,7 +62,10 @@ var AddFeed = Command{
 		for _, article := range feed.Articles {
 			articleKeys = append(articleKeys, string(article.GetKey()))
 		}
-		err = context.Database.Cache.InsertManyWithSameConfigurationIDAndFeedID(context.CallerConfiguration.ID, dbFeed.ID, articleKeys)
+		err = context.Database.Cache.InsertManyWithSameConfigurationIDAndFeedID(
+			models.NewCacheKey(context.CallerConfiguration.ID, dbFeed.ID),
+			articleKeys,
+		)
 		if err != nil {
 			fmt.Printf("err is %v\n", err)
 			return helpers.CreateSimpleEmbed(

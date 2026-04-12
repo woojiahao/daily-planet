@@ -8,6 +8,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/woojiahao/daily-planet/bot/context"
 	"github.com/woojiahao/daily-planet/bot/helpers"
+	"github.com/woojiahao/daily-planet/db/models"
 	"github.com/woojiahao/daily-planet/source"
 )
 
@@ -35,7 +36,7 @@ var FetchFeed = Command{
 			)
 		}
 
-		dbFeed, err := context.Database.Feed.OneByConfigurationIDAndURL(context.CallerConfiguration.ID, url)
+		dbFeed, err := context.Database.Feed.OneByKey(models.NewFeedKey(context.CallerConfiguration.ID, url))
 		if err != nil {
 			if err == sql.ErrNoRows {
 				return helpers.CreateSimpleEmbed(
@@ -51,7 +52,7 @@ var FetchFeed = Command{
 			)
 		}
 
-		cachedArticles, err := context.Database.Cache.AllByConfigurationIDAndFeedID(context.CallerConfiguration.ID, dbFeed.ID)
+		cachedArticles, err := context.Database.Cache.AllByConfigurationIDAndFeedID(models.NewCacheKey(context.CallerConfiguration.ID, dbFeed.ID))
 		if err != nil {
 			return helpers.CreateSimpleEmbed(
 				"Failed to fetch feed cache",
@@ -63,8 +64,10 @@ var FetchFeed = Command{
 		newArticles, newArticleKeys := helpers.FetchNewArticles(feed, cachedArticles)
 
 		err = context.Database.Cache.InsertManyWithSameConfigurationIDAndFeedID(
-			context.CallerConfiguration.ID,
-			dbFeed.ID,
+			models.NewCacheKey(
+				context.CallerConfiguration.ID,
+				dbFeed.ID,
+			),
 			newArticleKeys,
 		)
 		if err != nil {

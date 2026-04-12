@@ -7,12 +7,18 @@ import (
 	"time"
 
 	"github.com/woojiahao/daily-planet/db/scanner"
+	"github.com/woojiahao/daily-planet/ds"
+)
+
+type (
+	CacheID  int
+	CacheKey ds.Pair[ConfigurationID, FeedID]
 )
 
 type Cache struct {
-	ID              int
-	ConfigurationID int
-	FeedID          int
+	ID              CacheID
+	ConfigurationID ConfigurationID
+	FeedID          FeedID
 	ArticleKey      string
 	CreatedAt       time.Time
 }
@@ -44,7 +50,11 @@ func parseCacheRow(rows scanner.RowScanner) (Cache, error) {
 	return cache, nil
 }
 
-func (m CacheModel) InsertOne(configurationID, feedID int, articleKey string) error {
+func NewCacheKey(configurationID ConfigurationID, feedID FeedID) CacheKey {
+	return CacheKey(*ds.NewPair(configurationID, feedID))
+}
+
+func (m CacheModel) InsertOne(cacheKey CacheKey, articleKey string) error {
 	query := `
 	INSERT INTO cache (
 		configuration_id,
@@ -62,7 +72,7 @@ func (m CacheModel) InsertOne(configurationID, feedID int, articleKey string) er
 
 	defer stmt.Close()
 
-	_, err = stmt.Exec(configurationID, feedID, articleKey)
+	_, err = stmt.Exec(cacheKey.First, cacheKey.Second, articleKey)
 	if err != nil {
 		return err
 	}
@@ -70,16 +80,16 @@ func (m CacheModel) InsertOne(configurationID, feedID int, articleKey string) er
 	return nil
 }
 
-func (m CacheModel) InsertMany(configurationIDs, feedIDs []int, articleKeys []string) error {
-	if len(configurationIDs) != len(feedIDs) || len(configurationIDs) != len(articleKeys) || len(feedIDs) != len(articleKeys) {
+func (m CacheModel) InsertMany(cacheKeys []CacheKey, articleKeys []string) error {
+	if len(cacheKeys) != len(articleKeys) {
 		return fmt.Errorf("input should be of equal length")
 	}
 
 	var placeholderValues []any
 	var queryPlaceholders []string
 
-	for i := range len(configurationIDs) {
-		placeholderValues = append(placeholderValues, configurationIDs[i], feedIDs[i], articleKeys[i])
+	for i := range len(cacheKeys) {
+		placeholderValues = append(placeholderValues, cacheKeys[i].First, cacheKeys[i].Second, articleKeys[i])
 		queryPlaceholders = append(queryPlaceholders, "(?, ?, ?)")
 	}
 
@@ -106,12 +116,12 @@ func (m CacheModel) InsertMany(configurationIDs, feedIDs []int, articleKeys []st
 	return nil
 }
 
-func (m CacheModel) InsertManyWithSameConfigurationIDAndFeedID(configurationID, feedID int, articleKeys []string) error {
+func (m CacheModel) InsertManyWithSameKey(cacheKey CacheKey, articleKeys []string) error {
 	var placeholderValues []any
 	var queryPlaceholders []string
 
 	for i := range len(articleKeys) {
-		placeholderValues = append(placeholderValues, configurationID, feedID, articleKeys[i])
+		placeholderValues = append(placeholderValues, cacheKey.First, cacheKey.Second, articleKeys[i])
 		queryPlaceholders = append(queryPlaceholders, "(?, ?, ?)")
 	}
 
@@ -138,7 +148,7 @@ func (m CacheModel) InsertManyWithSameConfigurationIDAndFeedID(configurationID, 
 	return nil
 }
 
-func (m CacheModel) AllByConfigurationIDAndFeedID(configurationID, feedID int) ([]Cache, error) {
+func (m CacheModel) AllByKey(cacheKey CacheKey) ([]Cache, error) {
 	query := `
 	SELECT
 		id,
@@ -158,7 +168,57 @@ func (m CacheModel) AllByConfigurationIDAndFeedID(configurationID, feedID int) (
 
 	defer stmt.Close()
 
-	rows, err := stmt.Query(configurationID, feedID)
+	rows, err := stmt.Query(cacheKey.First, cacheKey.Second)
+	if err != nil {
+		return nil, err
+	}
+
+	defer rows.Close()
+
+	var caches []Cache
+	for rows.Next() {
+		cache, err := parseCacheRow(rows)
+		if err != nil {
+			return nil, err
+		}
+		caches = append(caches, cache)
+	}
+
+	return caches, nil
+}
+
+func (m CacheModel) AllByKeys(keys []CacheKey) ([]Cache, error) {
+	var preparedQueryPlaceholders []string
+	for range len(keys) {
+		preparedQueryPlaceholders = append(preparedQueryPlaceholders, "?")
+	}
+	preparedQueryString := strings.Join(preparedQueryPlaceholders, ", ")
+
+	query := fmt.Sprintf(`
+	SELECT
+		id,
+		configuration_id,
+		feed_id,
+		article_key,
+		created_at
+	FROM
+		cache
+	WHERE
+		configuration_id IN (%s)
+		AND feed_id IN (%s);`, preparedQueryString, preparedQueryString)
+	stmt, err := m.DB.Prepare(query)
+	if err != nil {
+		return nil, err
+	}
+
+	defer stmt.Close()
+
+	values := make([]any, len(keys)*2)
+	for i, key := range keys {
+		values[i] = int(key.First)
+		values[i+len(keys)] = int(key.Second)
+	}
+	rows, err := stmt.Query(values...)
 	if err != nil {
 		return nil, err
 	}

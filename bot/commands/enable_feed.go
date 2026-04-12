@@ -7,6 +7,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/woojiahao/daily-planet/bot/context"
 	"github.com/woojiahao/daily-planet/bot/helpers"
+	"github.com/woojiahao/daily-planet/db/models"
 )
 
 var EnableFeed = Command{
@@ -22,7 +23,7 @@ var EnableFeed = Command{
 	},
 	Handler: func(context context.CommandContext) *discordgo.InteractionResponse {
 		url := helpers.GetRequiredOption[string](context, "url")
-		feed, err := context.Database.Feed.OneByConfigurationIDAndURL(context.CallerConfiguration.ID, url)
+		feed, err := context.Database.Feed.OneByKey(models.NewFeedKey(context.CallerConfiguration.ID, url))
 		if err != nil {
 			if err == sql.ErrNoRows {
 				return helpers.CreateSimpleEmbed(

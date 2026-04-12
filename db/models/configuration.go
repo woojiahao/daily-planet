@@ -7,7 +7,10 @@ import (
 	"github.com/woojiahao/daily-planet/db/scanner"
 )
 
-type CommandSource string
+type (
+	CommandSource   string
+	ConfigurationID int
+)
 
 const (
 	CommandSourceDM     CommandSource = "DM"
@@ -15,7 +18,7 @@ const (
 )
 
 type Configuration struct {
-	ID           int
+	ID           ConfigurationID
 	SnowflakeID  string
 	Type         CommandSource
 	CronSchedule string
