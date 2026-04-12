@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/bwmarrin/discordgo"
+	"github.com/mattn/go-sqlite3"
 	"github.com/woojiahao/daily-planet/bot/context"
 	"github.com/woojiahao/daily-planet/bot/helpers"
 	"github.com/woojiahao/daily-planet/source"
@@ -29,9 +30,9 @@ var AddFeed = Command{
 		feed, err := source.LoadFeed(url)
 		if err != nil {
 			fmt.Printf("err is %v\n", err)
-			return helpers.CreateEmbed(
+			return helpers.CreateSimpleEmbed(
 				"Feed could not be loaded",
-				fmt.Sprintf("Failed to load feed %s into source.\nVerify that the feed is well-formed.", url),
+				fmt.Sprintf("Failed to load feed %s into source.\nVerify that the feed is well-formed.", url, url),
 				helpers.ColorRed,
 			)
 		}
@@ -39,7 +40,16 @@ var AddFeed = Command{
 		dbFeed, err := context.Database.Feed.InsertOne(context.CallerConfiguration.ID, url, string(feed.EngineType))
 		if err != nil {
 			fmt.Printf("err is %v\n", err)
-			return helpers.CreateEmbed(
+			if sqlite3Err, ok := err.(sqlite3.Error); ok {
+				if sqlite3Err.ExtendedCode == sqlite3.ErrConstraintUnique {
+					return helpers.CreateSimpleEmbed(
+						"Feed NOT added",
+						fmt.Sprintf("Source %s already exists.\n\nUse `/list-feeds` to locate it or `/enable-feed %s` to enable it if it has been disabled.", url),
+						helpers.ColorRed,
+					)
+				}
+			}
+			return helpers.CreateSimpleEmbed(
 				"Feed NOT added",
 				fmt.Sprintf("Failed to add feed %s to source. Try again.", url),
 				helpers.ColorRed,
@@ -58,14 +68,14 @@ var AddFeed = Command{
 		err = context.Database.Cache.InsertMany(configurationIDs, feedIDs, articleKeys)
 		if err != nil {
 			fmt.Printf("err is %v\n", err)
-			return helpers.CreateEmbed(
+			return helpers.CreateSimpleEmbed(
 				"Feed NOT added",
 				"Failed to load feed articles into cache",
 				helpers.ColorRed,
 			)
 		}
 
-		return helpers.CreateEmbed(
+		return helpers.CreateSimpleEmbed(
 			"Feed added",
 			fmt.Sprintf("Added feed %s to source", url),
 			helpers.ColorGreen,
