@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"runtime"
+	"sync"
 	"time"
 
 	"github.com/woojiahao/daily-planet/source/helpers"
@@ -118,4 +120,61 @@ func LoadFeed(feedURL string) (Feed, error) {
 	}
 
 	return Feed{}, fmt.Errorf("failed to load feed, not types RSS, Atom, or JSON")
+}
+
+func BulkLoadFeeds(feedURLs []string) ([]Feed, error) {
+	workers := runtime.NumCPU() * 4
+	n := len(feedURLs)
+
+	if workers > n {
+		workers = n
+	}
+
+	base := n / workers
+	extra := n % workers
+
+	grouped := make([][]string, workers)
+
+	start := 0
+	for i := range workers {
+		size := base
+		if i < extra {
+			size++
+		}
+
+		end := start + size
+		grouped[i] = feedURLs[start:end]
+		start = end
+	}
+
+	var wg sync.WaitGroup
+	wg.Add(workers)
+	ch := make(chan Feed)
+	loadFeeds := func(i int) {
+		defer wg.Done()
+		urls := grouped[i]
+		for _, url := range urls {
+			feed, err := LoadFeed(url)
+			// TODO(woojiahao): maintain skipped feed list
+			if err == nil {
+				ch <- feed
+			}
+		}
+	}
+
+	go func() {
+		wg.Wait()
+		close(ch)
+	}()
+
+	for i := range workers {
+		go loadFeeds(i)
+	}
+
+	var feeds []Feed
+	for feed := range ch {
+		feeds = append(feeds, feed)
+	}
+
+	return feeds, nil
 }
