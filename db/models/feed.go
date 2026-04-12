@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/woojiahao/daily-planet/db/helpers"
 	"github.com/woojiahao/daily-planet/db/scanner"
 )
 
@@ -230,5 +231,22 @@ func (m FeedModel) DeleteOneByID(id int) error {
 	defer stmt.Close()
 
 	_, err = stmt.Exec(id)
+	return err
+}
+
+func (m FeedModel) UpdateOneByID(id int, disabled bool) error {
+	query := `
+	UPDATE feed
+	SET
+		disabled = ?
+	WHERE id = ?;`
+	stmt, err := m.DB.Prepare(query)
+	if err != nil {
+		return err
+	}
+
+	defer stmt.Close()
+
+	_, err = stmt.Exec(helpers.BoolToInt(disabled), id)
 	return err
 }
