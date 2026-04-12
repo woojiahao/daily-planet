@@ -43,6 +43,15 @@ func CreateEmbed(embed Embed) *discordgo.InteractionResponse {
 	}
 }
 
+func CreateSimpleEmbed(title, description string, color Color) *discordgo.InteractionResponse {
+	embed := Embed{
+		Title:       title,
+		Description: description,
+		Color:       color,
+	}
+	return CreateEmbed(embed)
+}
+
 func CreateModal(customID, title string, components []discordgo.MessageComponent) *discordgo.InteractionResponse {
 	return &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseModal,
@@ -70,6 +79,10 @@ func CreateEphemeralMessage(content string) *discordgo.InteractionResponse {
 
 func CreateEphemeralEmbed(embed Embed) *discordgo.InteractionResponse {
 	return createEphemeralResponse(CreateEmbed(embed))
+}
+
+func CreateEphemeralSimpleEmbed(title, description string, color Color) *discordgo.InteractionResponse {
+	return createEphemeralResponse(CreateSimpleEmbed(title, description, color))
 }
 
 func CreateEphemeralModal(customID, title string, components []discordgo.MessageComponent) *discordgo.InteractionResponse {
