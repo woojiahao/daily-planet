@@ -61,23 +61,32 @@ var FetchFeeds = Command{
 			}
 		}
 
-		err = context.Database.Cache.InsertMany(insertCacheKeys, insertArticleKeys)
-		if err != nil {
-			return helpers.CreateSimpleEmbed(
-				"Failed to save cache",
-				"Failed to save articles into cache in this source",
-				helpers.ColorRed,
-			)
-		}
+		if len(allArticles) != 0 {
+			err = context.Database.Cache.InsertMany(insertCacheKeys, insertArticleKeys)
+			if err != nil {
+				fmt.Printf("%v\n", err)
+				return helpers.CreateSimpleEmbed(
+					"Failed to save cache",
+					"Failed to save articles into cache in this source",
+					helpers.ColorRed,
+				)
+			}
 
-		var articleStrings []string
-		for _, article := range allArticles {
-			articleStrings = append(articleStrings, fmt.Sprintf("- [%s](%s)", article.Title, article.Link))
+			var articleStrings []string
+			for _, article := range allArticles {
+				articleStrings = append(articleStrings, fmt.Sprintf("- [%s](%s)", article.Title, article.Link))
+			}
+
+			return helpers.CreateSimpleEmbed(
+				"Feeds fetched",
+				strings.Join(articleStrings, "\n"),
+				helpers.ColorBlue,
+			)
 		}
 
 		return helpers.CreateSimpleEmbed(
 			"Feeds fetched",
-			strings.Join(articleStrings, "\n"),
+			"All feeds fetched but no new articles found",
 			helpers.ColorBlue,
 		)
 	},
