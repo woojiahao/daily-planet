@@ -62,7 +62,7 @@ var AddFeed = Command{
 		for _, article := range feed.Articles {
 			articleKeys = append(articleKeys, string(article.GetKey()))
 		}
-		err = context.Database.Cache.InsertManyWithSameConfigurationIDAndFeedID(
+		err = context.Database.Cache.InsertManyWithSameKey(
 			models.NewCacheKey(context.CallerConfiguration.ID, dbFeed.ID),
 			articleKeys,
 		)

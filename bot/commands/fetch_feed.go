@@ -52,7 +52,7 @@ var FetchFeed = Command{
 			)
 		}
 
-		cachedArticles, err := context.Database.Cache.AllByConfigurationIDAndFeedID(models.NewCacheKey(context.CallerConfiguration.ID, dbFeed.ID))
+		cachedArticles, err := context.Database.Cache.AllByKey(models.NewCacheKey(context.CallerConfiguration.ID, dbFeed.ID))
 		if err != nil {
 			return helpers.CreateSimpleEmbed(
 				"Failed to fetch feed cache",
@@ -63,7 +63,7 @@ var FetchFeed = Command{
 
 		newArticles, newArticleKeys := helpers.FetchNewArticles(feed, cachedArticles)
 
-		err = context.Database.Cache.InsertManyWithSameConfigurationIDAndFeedID(
+		err = context.Database.Cache.InsertManyWithSameKey(
 			models.NewCacheKey(
 				context.CallerConfiguration.ID,
 				dbFeed.ID,
