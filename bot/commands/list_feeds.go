@@ -16,22 +16,52 @@ var ListFeeds = Command{
 		feeds, err := context.Database.Feed.All()
 		if err != nil {
 			fmt.Printf("err is %v\n", err)
-			return helpers.CreateEmbed(
+			return helpers.CreateSimpleEmbed(
 				"Failed to load feeds",
 				"The Daily Planet failed to load feeds for this source",
 				helpers.ColorRed,
 			)
 		}
 
-		var feedURLs []string
+		var enabledFeeds []string
+		var disabledFeeds []string
 		for _, feed := range feeds {
-			feedURLs = append(feedURLs, "- "+feed.URL)
+			if feed.Disabled {
+				disabledFeeds = append(disabledFeeds, "- "+feed.URL)
+			} else {
+				enabledFeeds = append(enabledFeeds, "- "+feed.URL)
+			}
+		}
+
+		var fields []*discordgo.MessageEmbedField
+		if len(enabledFeeds) > 0 {
+			fields = append(fields, &discordgo.MessageEmbedField{
+				Name:  "Enabled",
+				Value: strings.Join(enabledFeeds, "\n"),
+			})
+		}
+
+		if len(disabledFeeds) > 0 {
+			fields = append(fields, &discordgo.MessageEmbedField{
+				Name:  "Disabled",
+				Value: strings.Join(disabledFeeds, "\n"),
+			})
 		}
 
 		return helpers.CreateEmbed(
-			"Feeds fetched",
-			strings.Join(feedURLs, "\n"),
-			helpers.ColorBlue,
+			helpers.Embed{
+				Title:  "Feeds fetched",
+				Color:  helpers.ColorBlue,
+				Fields: fields,
+				Footer: &discordgo.MessageEmbedFooter{
+					Text: fmt.Sprintf(
+						"Feeds: %d; enabled: %d; disabled: %d",
+						len(feeds),
+						len(enabledFeeds),
+						len(disabledFeeds),
+					),
+				},
+			},
 		)
 	},
 }
