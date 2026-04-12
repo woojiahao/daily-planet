@@ -10,6 +10,7 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/woojiahao/daily-planet/bot/commands"
+	"github.com/woojiahao/daily-planet/bot/context"
 	"github.com/woojiahao/daily-planet/bot/helpers"
 	"github.com/woojiahao/daily-planet/db"
 )
@@ -31,7 +32,7 @@ func testGuildID() string {
 func interactionHandlerWrapper(commandMap map[commands.CommandName]commands.Command) interface{} {
 	return func(session *discordgo.Session, interaction *discordgo.InteractionCreate) {
 		callerConfiguration, err := commands.GetCommandCallerConfiguration(interaction, database)
-		context := commands.CommandContext{
+		context := context.CommandContext{
 			Session:             session,
 			Interaction:         interaction,
 			Database:            database,
