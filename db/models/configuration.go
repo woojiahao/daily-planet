@@ -2,6 +2,7 @@ package models
 
 import (
 	"database/sql"
+	"strings"
 	"time"
 
 	"github.com/woojiahao/daily-planet/db/scanner"
@@ -152,4 +153,35 @@ func (m ConfigurationModel) InsertOne(snowflakeID string, commandSource CommandS
 	}
 
 	return nil
+}
+
+func (m ConfigurationModel) UpdateOneByID(id ConfigurationID, cronSchedule *string, showStats, disabled *bool) error {
+	if cronSchedule == nil && showStats == nil && disabled == nil {
+		return nil
+	}
+
+	query := "UPDATE configuration SET "
+	args := []any{}
+	setClauses := []string{}
+
+	if cronSchedule != nil {
+		setClauses = append(setClauses, "cron_schedule = ?")
+		args = append(args, *cronSchedule)
+	}
+
+	if showStats != nil {
+		setClauses = append(setClauses, "show_stats = ?")
+		args = append(args, *showStats)
+	}
+
+	if disabled != nil {
+		setClauses = append(setClauses, "disabled = ?")
+		args = append(args, *disabled)
+	}
+
+	query += strings.Join(setClauses, ", ") + " WHERE id = ?"
+	args = append(args, id)
+
+	_, err := m.DB.Exec(query, args...)
+	return err
 }

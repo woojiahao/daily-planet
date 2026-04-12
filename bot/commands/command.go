@@ -79,6 +79,9 @@ var SupportedCommands = []Command{
 	EnableFeed,
 	FetchFeed,
 	FetchFeeds,
+
+	// configuration related
+	EditCronSchedule,
 }
 
 func CommandsToNameMap(commands []Command) map[CommandName]Command {
