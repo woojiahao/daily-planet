@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/bwmarrin/discordgo"
+	"github.com/woojiahao/daily-planet/bot/context"
 	"github.com/woojiahao/daily-planet/bot/helpers"
 	"github.com/woojiahao/daily-planet/source"
 )
@@ -20,7 +21,7 @@ var AddFeed = Command{
 			Required:    true,
 		},
 	},
-	Handler: func(context CommandContext) *discordgo.InteractionResponse {
+	Handler: func(context context.CommandContext) *discordgo.InteractionResponse {
 		// TODO(woojiahao): wrap these in a transaction instead of separating the API calls
 		url := strings.Trim(context.Interaction.ApplicationCommandData().Options[0].StringValue(), " ")
 

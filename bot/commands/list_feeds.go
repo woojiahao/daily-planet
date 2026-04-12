@@ -5,13 +5,14 @@ import (
 	"strings"
 
 	"github.com/bwmarrin/discordgo"
+	"github.com/woojiahao/daily-planet/bot/context"
 	"github.com/woojiahao/daily-planet/bot/helpers"
 )
 
 var ListFeeds = Command{
 	Name:        "list-feeds",
 	Description: "List current feed for the Daily Planet",
-	Handler: func(context CommandContext) *discordgo.InteractionResponse {
+	Handler: func(context context.CommandContext) *discordgo.InteractionResponse {
 		feeds, err := context.Database.Feed.All()
 		if err != nil {
 			fmt.Printf("err is %v\n", err)

@@ -4,6 +4,7 @@ import (
 	"database/sql"
 
 	"github.com/bwmarrin/discordgo"
+	"github.com/woojiahao/daily-planet/bot/context"
 	"github.com/woojiahao/daily-planet/db"
 	"github.com/woojiahao/daily-planet/db/models"
 )
@@ -38,16 +39,9 @@ func GetCommandCallerConfiguration(interaction *discordgo.InteractionCreate, dat
 	return configuration, nil
 }
 
-type CommandContext struct {
-	Session             *discordgo.Session
-	Interaction         *discordgo.InteractionCreate
-	Database            *db.Database
-	CallerConfiguration models.Configuration
-}
-
 type (
-	CommandHandler            func(context CommandContext) *discordgo.InteractionResponse
-	CommandModalSubmitHandler func(context CommandContext) *discordgo.InteractionResponse
+	CommandHandler            func(context context.CommandContext) *discordgo.InteractionResponse
+	CommandModalSubmitHandler func(context context.CommandContext) *discordgo.InteractionResponse
 )
 
 type CommandName string
@@ -81,7 +75,8 @@ var SupportedCommands = []Command{
 	ListFeeds,
 	AddFeed,
 	DeleteFeed,
-	EditFeed,
+	DisableFeed,
+	EnableFeed,
 }
 
 func CommandsToNameMap(commands []Command) map[CommandName]Command {
