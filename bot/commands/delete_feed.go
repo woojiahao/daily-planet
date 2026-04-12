@@ -30,7 +30,7 @@ var DeleteFeed = Command{
 			if err == sql.ErrNoRows {
 				return helpers.CreateSimpleEmbed(
 					"Feed not found",
-					fmt.Sprintf("Failed to fetch feed by URL %s as it does not exist.\n\nUse /list-feeds to verify that it exists in this source.", url),
+					fmt.Sprintf("Failed to fetch feed by URL %s as it does not exist.\n\nUse `/list-feeds` to verify that it exists in this source.", url),
 					helpers.ColorRed,
 				)
 			}
