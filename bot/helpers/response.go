@@ -14,6 +14,7 @@ func CreateMessage(content string) *discordgo.InteractionResponse {
 	}
 }
 
+// TODO(woojiahao): add more wrapped fields
 type Embed struct {
 	Title       string
 	Description string
