@@ -13,7 +13,8 @@ import (
 )
 
 var AddFeed = Command{
-	Name:        "add-feed",
+	Name:        "add",
+	Group:       "feed",
 	Description: "Add a feed to the Daily Planet",
 	Options: []*discordgo.ApplicationCommandOption{
 		{

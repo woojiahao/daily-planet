@@ -10,7 +10,8 @@ import (
 )
 
 var ListFeeds = Command{
-	Name:        "list-feeds",
+	Name:        "list",
+	Group:       "feed",
 	Description: "List current feed for the Daily Planet",
 	Handler: func(context context.CommandContext) *discordgo.InteractionResponse {
 		feeds, err := context.Database.Feed.All()

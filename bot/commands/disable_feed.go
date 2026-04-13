@@ -11,7 +11,8 @@ import (
 )
 
 var DisableFeed = Command{
-	Name:        "disable-feed",
+	Name:        "disable",
+	Group:       "feed",
 	Description: "Disable a provided feed",
 	Options: []*discordgo.ApplicationCommandOption{
 		{

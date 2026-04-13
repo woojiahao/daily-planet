@@ -7,6 +7,7 @@ import (
 	"github.com/woojiahao/daily-planet/bot/context"
 	"github.com/woojiahao/daily-planet/db"
 	"github.com/woojiahao/daily-planet/db/models"
+	"github.com/woojiahao/daily-planet/ds"
 )
 
 func GetCommandCallerConfiguration(interaction *discordgo.InteractionCreate, database *db.Database) (models.Configuration, error) {
@@ -44,7 +45,15 @@ type (
 	CommandModalSubmitHandler func(context context.CommandContext) *discordgo.InteractionResponse
 )
 
-type CommandName string
+type (
+	CommandName       string
+	CommandGroup      string
+	CommandIdentifier ds.ComparablePair[CommandGroup, CommandName]
+)
+
+func NewCommandIdentifier(group, name string) CommandIdentifier {
+	return CommandIdentifier(*ds.NewComparablePair(CommandGroup(group), CommandName(name)))
+}
 
 // TODO(woojiahao): the definition should actually just expand to avoid nesting structs unnecessarily
 type CommandDefinition struct {
@@ -54,6 +63,7 @@ type CommandDefinition struct {
 
 type Command struct {
 	Name               CommandName
+	Group              CommandGroup
 	Description        string
 	Options            []*discordgo.ApplicationCommandOption
 	Handler            CommandHandler
@@ -68,7 +78,17 @@ func (c Command) ToDiscordCommand() *discordgo.ApplicationCommand {
 	}
 }
 
+func (c Command) Identifier() CommandIdentifier {
+	return CommandIdentifier(*ds.NewComparablePair(c.Group, c.Name))
+}
+
+var groupDescriptions = map[CommandGroup]string{
+	"feed":          "Modify the feeds that are maintained in this source",
+	"configuration": "Modify the configuration of this source",
+}
+
 var SupportedCommands = []Command{
+	// no group
 	Ping,
 
 	// feed related
@@ -86,11 +106,43 @@ var SupportedCommands = []Command{
 	EnableConfiguration,
 }
 
-func CommandsToNameMap(commands []Command) map[CommandName]Command {
-	commandByName := make(map[CommandName]Command)
+func Commands() []*discordgo.ApplicationCommand {
+	var allCommands []*discordgo.ApplicationCommand
+	groupedCommands := make(map[CommandGroup][]*discordgo.ApplicationCommand)
+
+	for _, command := range SupportedCommands {
+		if command.Group == "" {
+			allCommands = append(allCommands, command.ToDiscordCommand())
+		} else {
+			groupedCommands[command.Group] = append(groupedCommands[command.Group], command.ToDiscordCommand())
+		}
+	}
+
+	for group, commands := range groupedCommands {
+		var subCommands []*discordgo.ApplicationCommandOption
+		for _, command := range commands {
+			subCommands = append(subCommands, &discordgo.ApplicationCommandOption{
+				Name:        command.Name,
+				Description: command.Description,
+				Type:        discordgo.ApplicationCommandOptionSubCommand,
+				Options:     command.Options,
+			})
+		}
+		allCommands = append(allCommands, &discordgo.ApplicationCommand{
+			Name:        string(group),
+			Description: groupDescriptions[group],
+			Options:     subCommands,
+		})
+	}
+
+	return allCommands
+}
+
+func CommandsToNameMap(commands []Command) map[CommandIdentifier]Command {
+	commandByName := make(map[CommandIdentifier]Command)
 
 	for _, command := range commands {
-		commandByName[command.Name] = command
+		commandByName[command.Identifier()] = command
 	}
 
 	return commandByName

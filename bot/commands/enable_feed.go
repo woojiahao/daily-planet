@@ -11,7 +11,8 @@ import (
 )
 
 var EnableFeed = Command{
-	Name:        "enable-feed",
+	Name:        "enable",
+	Group:       "feed",
 	Description: "Enable a provided feed",
 	Options: []*discordgo.ApplicationCommandOption{
 		{

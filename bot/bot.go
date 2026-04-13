@@ -29,7 +29,7 @@ func testGuildID() string {
 	return os.Getenv("TEST_GUILD_ID")
 }
 
-func interactionHandlerWrapper(commandMap map[commands.CommandName]commands.Command) interface{} {
+func interactionHandlerWrapper(commandMap map[commands.CommandIdentifier]commands.Command) interface{} {
 	return func(session *discordgo.Session, interaction *discordgo.InteractionCreate) {
 		callerConfiguration, err := commands.GetCommandCallerConfiguration(interaction, database)
 		context := context.CommandContext{
@@ -41,8 +41,16 @@ func interactionHandlerWrapper(commandMap map[commands.CommandName]commands.Comm
 
 		switch interaction.Type {
 		case discordgo.InteractionApplicationCommand:
-			commandName := interaction.ApplicationCommandData().Name
-			if command, ok := commandMap[commands.CommandName(commandName)]; ok {
+			data := interaction.ApplicationCommandData()
+			commandName := data.Name
+			var commandSub string
+
+			for _, opt := range data.Options {
+				if opt.Type == discordgo.ApplicationCommandOptionSubCommand {
+					commandSub = opt.Name
+				}
+			}
+			if command, ok := commandMap[commands.NewCommandIdentifier(commandName, commandSub)]; ok {
 				if err != nil {
 					helpers.SendMessage(session, interaction, "Failed to execute command. Try again later.")
 					return
@@ -60,8 +68,10 @@ func interactionHandlerWrapper(commandMap map[commands.CommandName]commands.Comm
 
 		case discordgo.InteractionModalSubmit:
 			data := context.Interaction.ModalSubmitData()
-			commandName := strings.Split(data.CustomID, ":")[0]
-			if command, ok := commandMap[commands.CommandName(commandName)]; ok {
+			parts := strings.Split(data.CustomID, ":")
+			commandName := parts[0]
+			commandSub := parts[1]
+			if command, ok := commandMap[commands.NewCommandIdentifier(commandName, commandSub)]; ok {
 				if command.ModalSubmitHandler != nil {
 					response := command.ModalSubmitHandler(context)
 					if response != nil {
@@ -118,11 +128,11 @@ func Run() {
 		}
 	}
 
-	for _, command := range commands.SupportedCommands {
+	for _, command := range commands.Commands() {
 		_, err = discord.ApplicationCommandCreate(
 			discord.State.User.ID,
 			testGuildID(),
-			command.ToDiscordCommand(),
+			command,
 		)
 		if err != nil {
 			panic(err)

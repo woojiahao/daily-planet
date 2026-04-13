@@ -12,7 +12,8 @@ import (
 )
 
 var DeleteFeed = Command{
-	Name:        "delete-feed",
+	Name:        "delete",
+	Group:       "feed",
 	Description: "Deletes a feed from the Daily Planet",
 	Options: []*discordgo.ApplicationCommandOption{
 		{

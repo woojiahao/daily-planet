@@ -14,7 +14,8 @@ import (
 )
 
 var FetchFeeds = Command{
-	Name:        "fetch-feeds",
+	Name:        "fetch-all",
+	Group:       "feed",
 	Description: "Updates every feed",
 	Handler: func(context context.CommandContext) *discordgo.InteractionResponse {
 		enabledFeeds, err := context.Database.Feed.AllEnabled()

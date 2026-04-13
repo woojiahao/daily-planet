@@ -11,6 +11,7 @@ import (
 
 var EditCronSchedule = Command{
 	Name:        "edit-cron-schedule",
+	Group:       "configuration",
 	Description: "Edit the current source's Cron schedule",
 	Options: []*discordgo.ApplicationCommandOption{
 		{

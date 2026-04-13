@@ -9,7 +9,8 @@ import (
 )
 
 var EnableConfiguration = Command{
-	Name:        "enable-configuration",
+	Name:        "enable",
+	Group:       "configuration",
 	Description: "Enable this source to allow updates to be posted",
 	Handler: func(context context.CommandContext) *discordgo.InteractionResponse {
 		disabled := false

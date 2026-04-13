@@ -13,7 +13,8 @@ import (
 )
 
 var FetchFeed = Command{
-	Name:        "fetch-feed",
+	Name:        "fetch",
+	Group:       "feed",
 	Description: "Retrieves the latest articles of a given feed",
 	Options: []*discordgo.ApplicationCommandOption{
 		{

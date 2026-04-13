@@ -9,7 +9,8 @@ import (
 )
 
 var DisableConfiguration = Command{
-	Name:        "disable-configuration",
+	Name:        "disable",
+	Group:       "configuration",
 	Description: "Disable this source from posting updates",
 	Handler: func(context context.CommandContext) *discordgo.InteractionResponse {
 		disabled := true
