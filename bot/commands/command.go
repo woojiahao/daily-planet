@@ -28,7 +28,7 @@ func GetCommandCallerConfiguration(interaction *discordgo.InteractionCreate, dat
 			var channelID *string
 			if currentCommandSource == models.CommandSourceServer {
 				// default to using current channel as the post channel
-				channelID = &interaction.Message.ChannelID
+				channelID = &interaction.ChannelID
 			}
 			database.Configuration.InsertOne(snowflakeID, channelID, currentCommandSource)
 			configuration, err := database.Configuration.OneBySnowflakeID(snowflakeID)
