@@ -18,8 +18,12 @@ func main() {
 		panic(err)
 	}
 
-	cron.NewCronEngine(database)
+	bot, err := bot.NewBot(database)
+	if err != nil {
+		panic(err)
+	}
 
-	bot := bot.NewBot(database)
+	cron.NewCronEngine(database, bot)
+
 	bot.Run()
 }

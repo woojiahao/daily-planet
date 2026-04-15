@@ -89,23 +89,23 @@ func interactionHandlerWrapper(database *db.Database, commandMap map[commands.Co
 }
 
 type BotInterface interface {
-	SendMessage() error
+	SendMessage(id, message string) error
 }
 
 type Bot struct {
 	session *discordgo.Session
 }
 
-func NewBot(database *db.Database) *Bot {
+func NewBot(database *db.Database) (*Bot, error) {
 	session, err := discordgo.New("Bot " + botToken())
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	commandsMap := commands.CommandsToNameMap(commands.SupportedCommands)
 
 	session.AddHandler(interactionHandlerWrapper(database, commandsMap))
-	return &Bot{session: session}
+	return &Bot{session: session}, nil
 }
 
 func (b *Bot) Run() {
@@ -148,4 +148,8 @@ func (b *Bot) Run() {
 	<-stop
 
 	b.session.Close()
+}
+
+func (b *Bot) SendMessage(id, message string) error {
+	return nil
 }
