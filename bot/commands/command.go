@@ -25,7 +25,12 @@ func GetCommandCallerConfiguration(interaction *discordgo.InteractionCreate, dat
 	if err != nil {
 		if err == sql.ErrNoRows {
 			// no configuration belonging to the current command source, create one
-			database.Configuration.InsertOne(snowflakeID, currentCommandSource)
+			var channelID *string
+			if currentCommandSource == models.CommandSourceServer {
+				// default to using current channel as the post channel
+				channelID = &interaction.Message.ChannelID
+			}
+			database.Configuration.InsertOne(snowflakeID, channelID, currentCommandSource)
 			configuration, err := database.Configuration.OneBySnowflakeID(snowflakeID)
 			if err != nil {
 				return models.Configuration{}, err
@@ -49,6 +54,11 @@ type (
 	CommandName       string
 	CommandGroup      string
 	CommandIdentifier ds.ComparablePair[CommandGroup, CommandName]
+)
+
+const (
+	CommandGroupFeed          CommandGroup = "feed"
+	CommandGroupConfiguration CommandGroup = "configuration"
 )
 
 func NewCommandIdentifier(group, name string) CommandIdentifier {
@@ -83,8 +93,8 @@ func (c Command) Identifier() CommandIdentifier {
 }
 
 var groupDescriptions = map[CommandGroup]string{
-	"feed":          "Modify the feeds that are maintained in this source",
-	"configuration": "Modify the configuration of this source",
+	CommandGroupFeed:          "Modify the feeds that are maintained in this source",
+	CommandGroupConfiguration: "Modify the configuration of this source",
 }
 
 var SupportedCommands = []Command{
