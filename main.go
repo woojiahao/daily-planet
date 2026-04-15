@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/joho/godotenv"
 	"github.com/woojiahao/daily-planet/bot"
+	"github.com/woojiahao/daily-planet/db"
 )
 
 func main() {
@@ -11,5 +12,10 @@ func main() {
 		panic(err)
 	}
 
-	bot.Run()
+	database, err := db.New()
+	if err != nil {
+		panic(err)
+	}
+
+	bot.Run(database)
 }

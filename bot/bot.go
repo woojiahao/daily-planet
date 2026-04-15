@@ -15,8 +15,6 @@ import (
 	"github.com/woojiahao/daily-planet/db"
 )
 
-var database *db.Database
-
 func botToken() string {
 	discordToken := os.Getenv("DISCORD_TOKEN")
 	if discordToken == "" {
@@ -29,7 +27,7 @@ func testGuildID() string {
 	return os.Getenv("TEST_GUILD_ID")
 }
 
-func interactionHandlerWrapper(commandMap map[commands.CommandIdentifier]commands.Command) interface{} {
+func interactionHandlerWrapper(database *db.Database, commandMap map[commands.CommandIdentifier]commands.Command) interface{} {
 	return func(session *discordgo.Session, interaction *discordgo.InteractionCreate) {
 		callerConfiguration, err := commands.GetCommandCallerConfiguration(interaction, database)
 		context := context.CommandContext{
@@ -90,14 +88,7 @@ func interactionHandlerWrapper(commandMap map[commands.CommandIdentifier]command
 	}
 }
 
-func Run() {
-	var err error
-
-	database, err = db.New()
-	if err != nil {
-		panic(err)
-	}
-
+func Run(database *db.Database) {
 	discord, err := discordgo.New("Bot " + botToken())
 	if err != nil {
 		panic(err)
@@ -105,7 +96,7 @@ func Run() {
 
 	commandsMap := commands.CommandsToNameMap(commands.SupportedCommands)
 
-	discord.AddHandler(interactionHandlerWrapper(commandsMap))
+	discord.AddHandler(interactionHandlerWrapper(database, commandsMap))
 
 	err = discord.Open()
 	if err != nil {
