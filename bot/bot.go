@@ -88,28 +88,39 @@ func interactionHandlerWrapper(database *db.Database, commandMap map[commands.Co
 	}
 }
 
-func Run(database *db.Database) {
-	discord, err := discordgo.New("Bot " + botToken())
+type BotInterface interface {
+	SendMessage() error
+}
+
+type Bot struct {
+	session *discordgo.Session
+}
+
+func NewBot(database *db.Database) *Bot {
+	session, err := discordgo.New("Bot " + botToken())
 	if err != nil {
 		panic(err)
 	}
 
 	commandsMap := commands.CommandsToNameMap(commands.SupportedCommands)
 
-	discord.AddHandler(interactionHandlerWrapper(database, commandsMap))
+	session.AddHandler(interactionHandlerWrapper(database, commandsMap))
+	return &Bot{session: session}
+}
 
-	err = discord.Open()
+func (b *Bot) Run() {
+	err := b.session.Open()
 	if err != nil {
 		panic(err)
 	}
 
-	existingCommands, err := discord.ApplicationCommands(discord.State.User.ID, testGuildID())
+	existingCommands, err := b.session.ApplicationCommands(b.session.State.User.ID, testGuildID())
 	if err != nil {
 		panic(err)
 	}
 
 	for _, command := range existingCommands {
-		err = discord.ApplicationCommandDelete(
+		err = b.session.ApplicationCommandDelete(
 			command.ApplicationID,
 			command.GuildID,
 			command.ID,
@@ -120,8 +131,8 @@ func Run(database *db.Database) {
 	}
 
 	for _, command := range commands.Commands() {
-		_, err = discord.ApplicationCommandCreate(
-			discord.State.User.ID,
+		_, err = b.session.ApplicationCommandCreate(
+			b.session.State.User.ID,
 			testGuildID(),
 			command,
 		)
@@ -136,5 +147,5 @@ func Run(database *db.Database) {
 	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
 	<-stop
 
-	discord.Close()
+	b.session.Close()
 }

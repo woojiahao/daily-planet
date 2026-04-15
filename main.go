@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/joho/godotenv"
 	"github.com/woojiahao/daily-planet/bot"
+	"github.com/woojiahao/daily-planet/cron"
 	"github.com/woojiahao/daily-planet/db"
 )
 
@@ -17,5 +18,8 @@ func main() {
 		panic(err)
 	}
 
-	bot.Run(database)
+	cron.NewCronEngine(database)
+
+	bot := bot.NewBot(database)
+	bot.Run()
 }
