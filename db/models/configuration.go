@@ -40,7 +40,7 @@ type ConfigurationInterface interface {
 	OneBySnowflakeID(snowflakeID string) (Configuration, error)
 
 	// insert
-	InsertOne(snowflakeID string, commandSource CommandSource) error
+	InsertOne(snowflakeID string, channelID *string, commandSource CommandSource) error
 
 	// update
 	UpdateOneByID(id ConfigurationID, cronSchedule *string, showStats, disabled *bool) error
@@ -169,7 +169,7 @@ func (m ConfigurationModel) OneBySnowflakeID(snowflakeID string) (Configuration,
 	return configuration, nil
 }
 
-func (m ConfigurationModel) InsertOne(snowflakeID string, commandSource CommandSource) error {
+func (m ConfigurationModel) InsertOne(snowflakeID string, channelID *string, commandSource CommandSource) error {
 	// Always default to a cron_schedule of once every 6 hours
 	query := `
 	INSERT INTO configuration  (
@@ -177,13 +177,15 @@ func (m ConfigurationModel) InsertOne(snowflakeID string, commandSource CommandS
 		type,
 		cron_schedule,
 		show_stats,
-		disabled
+		disabled,
+		channel_id
 	) VALUES (
 		?,
 		?,
 		'0 */6 * * *',
 		0,
-		0
+		0,
+		?
 	);`
 	stmt, err := m.DB.Prepare(query)
 	if err != nil {
@@ -192,7 +194,7 @@ func (m ConfigurationModel) InsertOne(snowflakeID string, commandSource CommandS
 
 	defer stmt.Close()
 
-	_, err = stmt.Exec(snowflakeID, commandSource)
+	_, err = stmt.Exec(snowflakeID, commandSource, channelID)
 	if err != nil {
 		return err
 	}
