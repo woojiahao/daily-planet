@@ -101,7 +101,7 @@ func (m CacheModel) InsertMany(cacheKeys []CacheKey, articleKeys []string) error
 	var placeholderValues []any
 	var queryPlaceholders []string
 
-	for i := rangelen(cacheKeys) {
+	for i := range len(cacheKeys) {
 		placeholderValues = append(placeholderValues, cacheKeys[i].First, cacheKeys[i].Second, articleKeys[i])
 		queryPlaceholders = append(queryPlaceholders, "(?, ?, ?)")
 	}
