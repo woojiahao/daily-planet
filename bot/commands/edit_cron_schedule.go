@@ -3,10 +3,10 @@ package commands
 import (
 	"fmt"
 
-	"github.com/adhocore/gronx"
 	"github.com/bwmarrin/discordgo"
 	"github.com/woojiahao/daily-planet/bot/context"
 	"github.com/woojiahao/daily-planet/bot/helpers"
+	cron_helpers "github.com/woojiahao/daily-planet/cron/helpers"
 )
 
 var EditCronSchedule = Command{
@@ -23,8 +23,7 @@ var EditCronSchedule = Command{
 	},
 	Handler: func(context context.CommandContext) *discordgo.InteractionResponse {
 		cronSchedule := helpers.GetRequiredOption[string](context, "cron-schedule")
-		gron := gronx.New()
-		if !gron.IsValid(cronSchedule) {
+		if !cron_helpers.IsValidCron(cronSchedule) {
 			return helpers.CreateSimpleEmbed(
 				"Invalid Cron schedule string",
 				fmt.Sprintf("Cron schedule string `%s` is not valid.\n\nRefer to [crontab guru](https://crontab.guru) for help creating a Cron schedule string.", cronSchedule),
