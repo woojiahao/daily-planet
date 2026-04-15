@@ -114,6 +114,7 @@ var SupportedCommands = []Command{
 	EditCronSchedule,
 	DisableConfiguration,
 	EnableConfiguration,
+	SetChannel,
 }
 
 func Commands() []*discordgo.ApplicationCommand {

@@ -26,6 +26,7 @@ type Configuration struct {
 	CronSchedule string
 	ShowStats    bool
 	Disabled     bool
+	ChannelID    sql.NullString
 	CreatedAt    time.Time
 }
 
@@ -43,7 +44,8 @@ type ConfigurationInterface interface {
 	InsertOne(snowflakeID string, channelID *string, commandSource CommandSource) error
 
 	// update
-	UpdateOneByID(id ConfigurationID, cronSchedule *string, showStats, disabled *bool) error
+	// TODO(woojiahao): make this a struct for the inputs
+	UpdateOneByID(id ConfigurationID, cronSchedule, channelID *string, showStats, disabled *bool) error
 }
 
 func parseConfigurationRow(rows scanner.RowScanner) (Configuration, error) {
@@ -202,8 +204,8 @@ func (m ConfigurationModel) InsertOne(snowflakeID string, channelID *string, com
 	return nil
 }
 
-func (m ConfigurationModel) UpdateOneByID(id ConfigurationID, cronSchedule *string, showStats, disabled *bool) error {
-	if cronSchedule == nil && showStats == nil && disabled == nil {
+func (m ConfigurationModel) UpdateOneByID(id ConfigurationID, cronSchedule, channelID *string, showStats, disabled *bool) error {
+	if cronSchedule == nil && channelID == nil && showStats == nil && disabled == nil {
 		return nil
 	}
 
@@ -214,6 +216,11 @@ func (m ConfigurationModel) UpdateOneByID(id ConfigurationID, cronSchedule *stri
 	if cronSchedule != nil {
 		setClauses = append(setClauses, "cron_schedule = ?")
 		args = append(args, *cronSchedule)
+	}
+
+	if channelID != nil {
+		setClauses = append(setClauses, "channel_id = ?")
+		args = append(args, *channelID)
 	}
 
 	if showStats != nil {

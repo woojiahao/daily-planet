@@ -14,7 +14,7 @@ var EnableConfiguration = Command{
 	Description: "Enable this source to allow updates to be posted",
 	Handler: func(context context.CommandContext) *discordgo.InteractionResponse {
 		disabled := false
-		err := context.Database.Configuration.UpdateOneByID(context.CallerConfiguration.ID, nil, nil, &disabled)
+		err := context.Database.Configuration.UpdateOneByID(context.CallerConfiguration.ID, nil, nil, nil, &disabled)
 		if err != nil {
 			fmt.Printf("%v\n", err)
 			return helpers.CreateSimpleEmbed(

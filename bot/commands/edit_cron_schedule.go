@@ -31,7 +31,7 @@ var EditCronSchedule = Command{
 			)
 		}
 
-		err := context.Database.Configuration.UpdateOneByID(context.CallerConfiguration.ID, &cronSchedule, nil, nil)
+		err := context.Database.Configuration.UpdateOneByID(context.CallerConfiguration.ID, &cronSchedule, nil, nil, nil)
 		if err != nil {
 			fmt.Printf("%v\n", err)
 			return helpers.CreateSimpleEmbed(
