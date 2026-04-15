@@ -27,6 +27,15 @@ type CacheModel struct {
 	DB *sql.DB
 }
 
+type CacheInterface interface {
+	AllByKey(cacheKey CacheKey) ([]Cache, error)
+	AllByKeys(cacheKeys []CacheKey) ([]Cache, error)
+
+	InsertOne(cacheKey CacheKey, articleKey string) error
+	InsertMany(cacheKeys []CacheKey, articleKeys []string) error
+	InsertManyWithSameKey(cacheKey CacheKey, articleKeys []string) error
+}
+
 func parseCacheRow(rows scanner.RowScanner) (Cache, error) {
 	var cache Cache
 	var createdAtString string
@@ -92,7 +101,7 @@ func (m CacheModel) InsertMany(cacheKeys []CacheKey, articleKeys []string) error
 	var placeholderValues []any
 	var queryPlaceholders []string
 
-	for i := range len(cacheKeys) {
+	for i := rangelen(cacheKeys) {
 		placeholderValues = append(placeholderValues, cacheKeys[i].First, cacheKeys[i].Second, articleKeys[i])
 		queryPlaceholders = append(queryPlaceholders, "(?, ?, ?)")
 	}

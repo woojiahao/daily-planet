@@ -28,6 +28,24 @@ type FeedModel struct {
 	DB *sql.DB
 }
 
+type FeedInterface interface {
+	// retrieve
+	All() ([]Feed, error)
+	AllEnabled() ([]Feed, error)
+	AllByConfigurationID(configurationID ConfigurationID) ([]Feed, error)
+	OneByID(id FeedID) (Feed, error)
+	OneByKey(key FeedKey) (Feed, error)
+
+	// insert
+	InsertOne(configurationID ConfigurationID, url, feedType string) (Feed, error)
+
+	// update
+	DeleteOneByID(id FeedID) error
+
+	// delete
+	UpdateOneByID(id FeedID, disabled bool) error
+}
+
 func parseFeedRow(rows scanner.RowScanner) (Feed, error) {
 	var feed Feed
 	var disabledInt int

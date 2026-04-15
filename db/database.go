@@ -9,9 +9,9 @@ import (
 )
 
 type Database struct {
-	Configuration models.ConfigurationModel
-	Feed          models.FeedModel
-	Cache         models.CacheModel
+	Configuration models.ConfigurationInterface
+	Feed          models.FeedInterface
+	Cache         models.CacheInterface
 }
 
 func New() (*Database, error) {

@@ -33,6 +33,19 @@ type ConfigurationModel struct {
 	DB *sql.DB
 }
 
+type ConfigurationInterface interface {
+	// fetch
+	All() ([]Configuration, error)
+	OneByID(id ConfigurationID) (Configuration, error)
+	OneBySnowflakeID(snowflakeID string) (Configuration, error)
+
+	// insert
+	InsertOne(snowflakeID string, commandSource CommandSource) error
+
+	// update
+	UpdateOneByID(id ConfigurationID, cronSchedule *string, showStats, disabled *bool) error
+}
+
 func parseConfigurationRow(rows scanner.RowScanner) (Configuration, error) {
 	var configuration Configuration
 	var showStatsInt int
@@ -113,7 +126,6 @@ func (m ConfigurationModel) OneByID(id ConfigurationID) (Configuration, error) {
 	if err != nil {
 		return Configuration{}, err
 	}
-
 	defer stmt.Close()
 
 	row := stmt.QueryRow(id)
