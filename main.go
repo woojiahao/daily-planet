@@ -1,6 +1,11 @@
 package main
 
 import (
+	"context"
+	"os"
+	"os/signal"
+	"syscall"
+
 	"github.com/joho/godotenv"
 	"github.com/woojiahao/daily-planet/bot"
 	"github.com/woojiahao/daily-planet/cron"
@@ -8,6 +13,9 @@ import (
 )
 
 func main() {
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
 	err := godotenv.Load()
 	if err != nil {
 		panic(err)
@@ -23,7 +31,18 @@ func main() {
 		panic(err)
 	}
 
-	cron.NewCronEngine(database, bot)
+	engine := cron.NewCronEngine(database, bot)
+	bot.SetScheduler(engine)
 
-	bot.Run()
+	if err = engine.Start(); err != nil {
+		panic(err)
+	}
+
+	if err = bot.Run(); err != nil {
+		panic(err)
+	}
+
+	<-ctx.Done()
+	bot.Stop()
+	engine.Stop()
 }

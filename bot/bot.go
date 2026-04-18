@@ -4,15 +4,14 @@ package bot
 import (
 	"fmt"
 	"os"
-	"os/signal"
 	"strings"
-	"syscall"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/woojiahao/daily-planet/bot/commands"
 	"github.com/woojiahao/daily-planet/bot/context"
 	"github.com/woojiahao/daily-planet/bot/helpers"
 	"github.com/woojiahao/daily-planet/db"
+	"github.com/woojiahao/daily-planet/db/models"
 )
 
 func botToken() string {
@@ -92,8 +91,14 @@ type BotInterface interface {
 	SendMessage(id, message string) error
 }
 
+type Scheduler interface {
+	Schedule(configurationID models.ConfigurationID) error
+	Cancel(configurationID models.ConfigurationID) error
+}
+
 type Bot struct {
-	session *discordgo.Session
+	session   *discordgo.Session
+	scheduler Scheduler
 }
 
 func NewBot(database *db.Database) (*Bot, error) {
@@ -108,15 +113,19 @@ func NewBot(database *db.Database) (*Bot, error) {
 	return &Bot{session: session}, nil
 }
 
-func (b *Bot) Run() {
+func (b *Bot) SetScheduler(scheduler Scheduler) {
+	b.scheduler = scheduler
+}
+
+func (b *Bot) Run() error {
 	err := b.session.Open()
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	existingCommands, err := b.session.ApplicationCommands(b.session.State.User.ID, testGuildID())
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	for _, command := range existingCommands {
@@ -126,7 +135,7 @@ func (b *Bot) Run() {
 			command.ID,
 		)
 		if err != nil {
-			panic(err)
+			return err
 		}
 	}
 
@@ -137,19 +146,18 @@ func (b *Bot) Run() {
 			command,
 		)
 		if err != nil {
-			panic(err)
+			return err
 		}
 	}
 
 	fmt.Printf("bot is running\n")
-
-	stop := make(chan os.Signal, 1)
-	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
-	<-stop
-
-	b.session.Close()
+	return nil
 }
 
 func (b *Bot) SendMessage(id, message string) error {
 	return nil
+}
+
+func (b *Bot) Stop() {
+	b.session.Close()
 }
