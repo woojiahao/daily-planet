@@ -3,7 +3,6 @@ package bot
 
 import (
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/bwmarrin/discordgo"
@@ -12,18 +11,6 @@ import (
 	"github.com/woojiahao/daily-planet/bot/helpers"
 	"github.com/woojiahao/daily-planet/db"
 )
-
-func botToken() string {
-	discordToken := os.Getenv("DISCORD_TOKEN")
-	if discordToken == "" {
-		panic("missing DISCORD_TOKEN in environment")
-	}
-	return discordToken
-}
-
-func testGuildID() string {
-	return os.Getenv("TEST_GUILD_ID")
-}
 
 func interactionHandlerWrapper(database *db.Database, commandMap map[commands.CommandIdentifier]commands.Command) interface{} {
 	return func(session *discordgo.Session, interaction *discordgo.InteractionCreate) {
@@ -96,7 +83,7 @@ type Bot struct {
 }
 
 func NewBot(database *db.Database) (*Bot, error) {
-	session, err := discordgo.New("Bot " + botToken())
+	session, err := discordgo.New("Bot " + helpers.BotToken())
 	if err != nil {
 		return nil, err
 	}
@@ -117,7 +104,7 @@ func (b *Bot) Run() error {
 		return err
 	}
 
-	existingCommands, err := b.session.ApplicationCommands(b.session.State.User.ID, testGuildID())
+	existingCommands, err := b.session.ApplicationCommands(b.session.State.User.ID, helpers.TestGuildID())
 	if err != nil {
 		return err
 	}
@@ -136,7 +123,7 @@ func (b *Bot) Run() error {
 	for _, command := range commands.Commands() {
 		_, err = b.session.ApplicationCommandCreate(
 			b.session.State.User.ID,
-			testGuildID(),
+			helpers.TestGuildID(),
 			command,
 		)
 		if err != nil {

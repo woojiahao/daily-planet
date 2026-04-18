@@ -26,10 +26,8 @@ func GetCommandCallerConfiguration(interaction *discordgo.InteractionCreate, dat
 		if err == sql.ErrNoRows {
 			// no configuration belonging to the current command source, create one
 			var channelID *string
-			if currentCommandSource == models.CommandSourceServer {
-				// default to using current channel as the post channel
-				channelID = &interaction.ChannelID
-			}
+			// user DMs would still produce a channel id
+			channelID = &interaction.ChannelID
 			database.Configuration.InsertOne(snowflakeID, channelID, currentCommandSource)
 			configuration, err := database.Configuration.OneBySnowflakeID(snowflakeID)
 			if err != nil {
