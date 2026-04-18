@@ -2,7 +2,7 @@ package helpers
 
 import "os"
 
-func botToken() string {
+func BotToken() string {
 	discordToken := os.Getenv("DISCORD_TOKEN")
 	if discordToken == "" {
 		panic("missing DISCORD_TOKEN in environment")
@@ -10,6 +10,6 @@ func botToken() string {
 	return discordToken
 }
 
-func testGuildID() string {
+func TestGuildID() string {
 	return os.Getenv("TEST_GUILD_ID")
 }
