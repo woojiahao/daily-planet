@@ -19,7 +19,7 @@ type CronEngine struct {
 }
 
 func NewCronEngine(database *db.Database, bot bot.BotInterface) *CronEngine {
-	c := cron.New()
+	c := cron.New(cron.WithSeconds())
 	return &CronEngine{
 		cron:     c,
 		database: database,
@@ -29,6 +29,8 @@ func NewCronEngine(database *db.Database, bot bot.BotInterface) *CronEngine {
 }
 
 func (ce *CronEngine) Start() error {
+	ce.cron.Start()
+
 	configurations, err := ce.database.Configuration.All()
 	if err != nil {
 		return err
@@ -38,7 +40,7 @@ func (ce *CronEngine) Start() error {
 		if configuration.Disabled {
 			continue
 		}
-		err = ce.ScheduleConfiguration(configuration)
+		err = ce.Schedule(configuration)
 		if err != nil {
 			return err
 		}
@@ -59,22 +61,28 @@ func (ce *CronEngine) Cancel(configurationID models.ConfigurationID) error {
 	if entryID, ok := ce.entries[configurationID]; !ok {
 		return fmt.Errorf("configuration not scheduled")
 	} else {
-		delete(ce.entries, configurationID)
 		ce.cron.Remove(entryID)
+		delete(ce.entries, configurationID)
 	}
 	return nil
 }
 
-func (ce *CronEngine) Schedule(configurationID models.ConfigurationID) error {
+func (ce *CronEngine) ScheduleConfiguration(configurationID models.ConfigurationID) error {
 	configuration, err := ce.database.Configuration.OneByID(configurationID)
 	if err != nil {
 		return err
 	}
-	return ce.ScheduleConfiguration(configuration)
+	return ce.Schedule(configuration)
 }
 
-func (ce *CronEngine) ScheduleConfiguration(configuration models.Configuration) error {
+func (ce *CronEngine) Schedule(configuration models.Configuration) error {
+	if _, ok := ce.entries[configuration.ID]; ok {
+		return fmt.Errorf("schedule for configuration is already running. call Cancel on it first")
+	}
+	fmt.Printf("scheduled configuration %d with schedule %s\n", configuration.ID, configuration.CronSchedule)
+
 	entryID, err := ce.cron.AddFunc(configuration.CronSchedule, func() {
+		fmt.Printf("tick with type: %s and channel id %v\n", configuration.Type, configuration.ChannelID)
 		if configuration.Type == models.CommandSourceDM {
 			ce.bot.SendMessage(configuration.SnowflakeID, "hi")
 		} else {
@@ -86,6 +94,7 @@ func (ce *CronEngine) ScheduleConfiguration(configuration models.Configuration) 
 	if err != nil {
 		return err
 	}
+	fmt.Printf("next %v\n", ce.cron.Entry(entryID).Next)
 
 	ce.entries[configuration.ID] = entryID
 	return nil

@@ -31,12 +31,30 @@ var EditCronSchedule = Command{
 			)
 		}
 
-		err := context.Database.Configuration.UpdateOneByID(context.CallerConfiguration.ID, &cronSchedule, nil, nil, nil)
+		updatedConfiguration, err := context.Database.Configuration.UpdateOneByID(context.CallerConfiguration.ID, &cronSchedule, nil, nil, nil)
 		if err != nil {
 			fmt.Printf("%v\n", err)
 			return helpers.CreateSimpleEmbed(
 				"Failed to update Cron schedule",
 				"Failed to update Cron schedule of this source",
+				helpers.ColorRed,
+			)
+		}
+
+		if err = context.Scheduler.Cancel(updatedConfiguration.ID); err != nil {
+			fmt.Printf("%v\n", err)
+			return helpers.CreateSimpleEmbed(
+				"Failed to cancel configuration's schedule",
+				"Failed to disable configuration's schedule for this source",
+				helpers.ColorRed,
+			)
+		}
+
+		if err = context.Scheduler.Schedule(updatedConfiguration); err != nil {
+			fmt.Printf("%v\n", err)
+			return helpers.CreateSimpleEmbed(
+				"Failed to start configuration's schedule",
+				"Failed to start configuration's schedule for this source",
 				helpers.ColorRed,
 			)
 		}

@@ -45,7 +45,7 @@ type ConfigurationInterface interface {
 
 	// update
 	// TODO(woojiahao): make this a struct for the inputs
-	UpdateOneByID(id ConfigurationID, cronSchedule, channelID *string, showStats, disabled *bool) error
+	UpdateOneByID(id ConfigurationID, cronSchedule, channelID *string, showStats, disabled *bool) (Configuration, error)
 }
 
 func parseConfigurationRow(rows scanner.RowScanner) (Configuration, error) {
@@ -61,6 +61,7 @@ func parseConfigurationRow(rows scanner.RowScanner) (Configuration, error) {
 		&configuration.CronSchedule,
 		&showStatsInt,
 		&disabledInt,
+		&configuration.ChannelID,
 		&createdAtString,
 	)
 	if err != nil {
@@ -87,6 +88,7 @@ func (m ConfigurationModel) All() ([]Configuration, error) {
 		cron_schedule,
 		show_stats,
 		disabled,
+		channel_id,
 		created_at
 	FROM
 		configuration;`
@@ -118,6 +120,7 @@ func (m ConfigurationModel) OneByID(id ConfigurationID) (Configuration, error) {
 		cron_schedule,
 		show_stats,
 		disabled,
+		channel_id,
 		created_at
 	FROM
 		configuration
@@ -149,6 +152,7 @@ func (m ConfigurationModel) OneBySnowflakeID(snowflakeID string) (Configuration,
 		cron_schedule,
 		show_stats,
 		disabled,
+		channel_id,
 		created_at
 	FROM
 		configuration
@@ -204,9 +208,9 @@ func (m ConfigurationModel) InsertOne(snowflakeID string, channelID *string, com
 	return nil
 }
 
-func (m ConfigurationModel) UpdateOneByID(id ConfigurationID, cronSchedule, channelID *string, showStats, disabled *bool) error {
+func (m ConfigurationModel) UpdateOneByID(id ConfigurationID, cronSchedule, channelID *string, showStats, disabled *bool) (Configuration, error) {
 	if cronSchedule == nil && channelID == nil && showStats == nil && disabled == nil {
-		return nil
+		return Configuration{}, nil
 	}
 
 	query := "UPDATE configuration SET "
@@ -235,9 +239,9 @@ func (m ConfigurationModel) UpdateOneByID(id ConfigurationID, cronSchedule, chan
 		args = append(args, disabledInt)
 	}
 
-	query += strings.Join(setClauses, ", ") + " WHERE id = ?"
+	query += strings.Join(setClauses, ", ") + " WHERE id = ? RETURNING id, snowflake_id, type, cron_schedule, show_stats, disabled, channel_id, created_at"
 	args = append(args, id)
 
-	_, err := m.DB.Exec(query, args...)
-	return err
+	row := m.DB.QueryRow(query, args...)
+	return parseConfigurationRow(row)
 }

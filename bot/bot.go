@@ -11,7 +11,6 @@ import (
 	"github.com/woojiahao/daily-planet/bot/context"
 	"github.com/woojiahao/daily-planet/bot/helpers"
 	"github.com/woojiahao/daily-planet/db"
-	"github.com/woojiahao/daily-planet/db/models"
 )
 
 func botToken() string {
@@ -91,14 +90,9 @@ type BotInterface interface {
 	SendMessage(id, message string) error
 }
 
-type Scheduler interface {
-	Schedule(configurationID models.ConfigurationID) error
-	Cancel(configurationID models.ConfigurationID) error
-}
-
 type Bot struct {
 	session   *discordgo.Session
-	scheduler Scheduler
+	scheduler context.Scheduler
 }
 
 func NewBot(database *db.Database) (*Bot, error) {
@@ -113,7 +107,7 @@ func NewBot(database *db.Database) (*Bot, error) {
 	return &Bot{session: session}, nil
 }
 
-func (b *Bot) SetScheduler(scheduler Scheduler) {
+func (b *Bot) SetScheduler(scheduler context.Scheduler) {
 	b.scheduler = scheduler
 }
 
@@ -155,7 +149,8 @@ func (b *Bot) Run() error {
 }
 
 func (b *Bot) SendMessage(id, message string) error {
-	return nil
+	_, err := b.session.ChannelMessageSend(id, message)
+	return err
 }
 
 func (b *Bot) Stop() {

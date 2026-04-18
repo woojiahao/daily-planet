@@ -14,12 +14,21 @@ var DisableConfiguration = Command{
 	Description: "Disable this source from posting updates",
 	Handler: func(context context.CommandContext) *discordgo.InteractionResponse {
 		disabled := true
-		err := context.Database.Configuration.UpdateOneByID(context.CallerConfiguration.ID, nil, nil, nil, &disabled)
+		_, err := context.Database.Configuration.UpdateOneByID(context.CallerConfiguration.ID, nil, nil, nil, &disabled)
 		if err != nil {
 			fmt.Printf("%v\n", err)
 			return helpers.CreateSimpleEmbed(
 				"Failed to disable configuration",
 				"Failed to disable configuration for this source",
+				helpers.ColorRed,
+			)
+		}
+
+		if err = context.Scheduler.Cancel(context.CallerConfiguration.ID); err != nil {
+			fmt.Printf("%v\n", err)
+			return helpers.CreateSimpleEmbed(
+				"Failed to cancel configuration's schedule",
+				"Failed to disable configuration's schedule for this source",
 				helpers.ColorRed,
 			)
 		}
