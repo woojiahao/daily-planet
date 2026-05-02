@@ -44,6 +44,12 @@ func CreateEmbed(embed Embed) *discordgo.InteractionResponse {
 	}
 }
 
+func CreateDeferredResponse() *discordgo.InteractionResponse {
+	return &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
+	}
+}
+
 func CreateSimpleEmbed(title, description string, color Color) *discordgo.InteractionResponse {
 	embed := Embed{
 		Title:       title,
@@ -117,4 +123,37 @@ func SendEmbed(session *discordgo.Session, interaction *discordgo.InteractionCre
 			},
 		},
 	})
+}
+
+func SendSimpleEmbed(session *discordgo.Session, interaction *discordgo.InteractionCreate, title, description string, color Color) {
+	embed := Embed{
+		Title:       title,
+		Description: description,
+		Color:       color,
+	}
+	session.InteractionRespond(interaction.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseChannelMessageWithSource,
+		Data: &discordgo.InteractionResponseData{
+			Embeds: []*discordgo.MessageEmbed{
+				embed.toMessageEmbed(),
+			},
+		},
+	})
+}
+
+func SendFollowupSimpleEmbed(session *discordgo.Session, interaction *discordgo.InteractionCreate, title, description string, color Color) {
+	embed := Embed{
+		Title:       title,
+		Description: description,
+		Color:       color,
+	}
+	session.FollowupMessageCreate(
+		interaction.Interaction,
+		false,
+		&discordgo.WebhookParams{
+			Embeds: []*discordgo.MessageEmbed{
+				embed.toMessageEmbed(),
+			},
+		},
+	)
 }
