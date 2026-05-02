@@ -176,7 +176,7 @@ func (m ConfigurationModel) OneBySnowflakeID(snowflakeID string) (Configuration,
 }
 
 func (m ConfigurationModel) InsertOne(snowflakeID string, channelID *string, commandSource CommandSource) error {
-	// Always default to a cron_schedule of once every 6 hour starting at 12am
+	// Always default to a cron_schedule of once every 6 hour starting at 12am (with seconds)
 	query := `
 	INSERT INTO configuration  (
 		snowflake_id,
@@ -188,7 +188,7 @@ func (m ConfigurationModel) InsertOne(snowflakeID string, channelID *string, com
 	) VALUES (
 		?,
 		?,
-		'0 0,6,12,18 * * *',
+		'* 0 0,6,12,18 * * *',
 		0,
 		0,
 		?
