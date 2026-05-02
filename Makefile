@@ -34,3 +34,6 @@ migrate-up:
 
 migrate-down:
 	migrate -path db/migrations -database "sqlite3://daily_planet.db" down $(MIGRATION_DOWN)
+
+tidy:
+	go mod tidy
