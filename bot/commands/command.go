@@ -2,6 +2,7 @@ package commands
 
 import (
 	"database/sql"
+	"fmt"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/woojiahao/daily-planet/bot/context"
@@ -26,18 +27,26 @@ func GetCommandCallerConfiguration(
 	}
 
 	configuration, err := database.Configuration.OneBySnowflakeID(snowflakeID)
+	fmt.Printf("configuration is %v and err is %v, and snowflakeID is %v and %v\n", configuration, err, snowflakeID, err == sql.ErrNoRows)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			// no configuration belonging to the current command source, create one
 			channelID := &interaction.ChannelID
-			database.Configuration.InsertOne(snowflakeID, channelID, currentCommandSource)
-			configuration, err := database.Configuration.OneBySnowflakeID(snowflakeID)
-			if err != nil {
-				return models.Configuration{}, err
+			iErr := database.Configuration.InsertOne(snowflakeID, channelID, currentCommandSource)
+			if iErr != nil {
+				fmt.Printf("iErr is %v\n", iErr)
+				return models.Configuration{}, iErr
 			}
-			err = scheduler.Schedule(configuration)
-			if err != nil {
-				return models.Configuration{}, err
+
+			configuration, iErr := database.Configuration.OneBySnowflakeID(snowflakeID)
+			if iErr != nil {
+				fmt.Printf("iErr is %v\n", iErr)
+				return models.Configuration{}, iErr
+			}
+			iErr = scheduler.Schedule(configuration)
+			if iErr != nil {
+				fmt.Printf("iErr is %v\n", iErr)
+				return models.Configuration{}, iErr
 			}
 
 			return configuration, nil
