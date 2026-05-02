@@ -216,7 +216,12 @@ func FetchNewArticles(feed Feed, cachedArticles []models.Cache) ([]Article, []st
 	return newArticles, newArticleKeys
 }
 
-func FetchFeedsAlgorithmWrapper(configurationID models.ConfigurationID, database *db.Database, sender func(title, description string, color common.Color)) {
+func FetchFeedsAlgorithmWrapper(
+	configurationID models.ConfigurationID,
+	database *db.Database,
+	sendNoArticlesUpdate bool,
+	sender func(title, description string, color common.Color),
+) {
 	// Fetching algorithm:
 	// 1. Fetch all enabled feeds for this configuration
 	// 2. Map the feed ID -> feed / feed URL from the enabled feed
@@ -349,9 +354,11 @@ func FetchFeedsAlgorithmWrapper(configurationID models.ConfigurationID, database
 		return
 	}
 
-	sender(
-		"Feeds fetched",
-		"All feeds fetched but no new articles found",
-		common.ColorBlue,
-	)
+	if sendNoArticlesUpdate {
+		sender(
+			"Feeds fetched",
+			"All feeds fetched but no new articles found",
+			common.ColorBlue,
+		)
+	}
 }

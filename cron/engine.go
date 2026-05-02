@@ -99,6 +99,7 @@ func (ce *CronEngine) Schedule(configuration models.Configuration) error {
 			source.FetchFeedsAlgorithmWrapper(
 				configurationID,
 				ce.database,
+				false,
 				func(title string, description string, color common.Color) {
 					err := ce.bot.SendSimpleEmbed(
 						channelID,
