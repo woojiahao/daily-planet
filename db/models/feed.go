@@ -31,7 +31,7 @@ type FeedModel struct {
 type FeedInterface interface {
 	// retrieve
 	All() ([]Feed, error)
-	AllEnabled() ([]Feed, error)
+	AllEnabledByConfigurationID(id ConfigurationID) ([]Feed, error)
 	AllByConfigurationID(configurationID ConfigurationID) ([]Feed, error)
 	OneByID(id FeedID) (Feed, error)
 	OneByKey(key FeedKey) (Feed, error)
@@ -112,7 +112,7 @@ func (m FeedModel) All() ([]Feed, error) {
 	return feeds, nil
 }
 
-func (m FeedModel) AllEnabled() ([]Feed, error) {
+func (m FeedModel) AllEnabledByConfigurationID(id ConfigurationID) ([]Feed, error) {
 	query := `
 	SELECT
 		id,
@@ -125,8 +125,16 @@ func (m FeedModel) AllEnabled() ([]Feed, error) {
 	FROM
 		feed
 	WHERE
-		disabled = 0;`
-	rows, err := m.DB.Query(query)
+		disabled = 0
+		AND configuration_id = ?;`
+	stmt, err := m.DB.Prepare(query)
+	if err != nil {
+		return nil, err
+	}
+
+	defer stmt.Close()
+
+	rows, err := stmt.Query(id)
 	if err != nil {
 		return nil, err
 	}
@@ -158,8 +166,7 @@ func (m FeedModel) AllByConfigurationID(configurationID ConfigurationID) ([]Feed
 	FROM
 		feed
 	WHERE
-		configuration_id = ?
-	LIMIT 1;`
+		configuration_id = ?;`
 	stmt, err := m.DB.Prepare(query)
 	if err != nil {
 		return nil, err
