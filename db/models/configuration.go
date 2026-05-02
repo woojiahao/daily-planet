@@ -15,7 +15,7 @@ type (
 )
 
 const (
-	CommandSourceDM     CommandSource = "DM"
+	CommandSourceDM     CommandSource = "direct_message"
 	CommandSourceServer CommandSource = "server"
 )
 
