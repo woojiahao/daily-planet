@@ -10,7 +10,11 @@ import (
 	"github.com/woojiahao/daily-planet/ds"
 )
 
-func GetCommandCallerConfiguration(interaction *discordgo.InteractionCreate, database *db.Database) (models.Configuration, error) {
+func GetCommandCallerConfiguration(
+	interaction *discordgo.InteractionCreate,
+	scheduler context.Scheduler,
+	database *db.Database,
+) (models.Configuration, error) {
 	var currentCommandSource models.CommandSource
 	var snowflakeID string
 	if interaction.GuildID == "" {
@@ -28,6 +32,10 @@ func GetCommandCallerConfiguration(interaction *discordgo.InteractionCreate, dat
 			channelID := &interaction.ChannelID
 			database.Configuration.InsertOne(snowflakeID, channelID, currentCommandSource)
 			configuration, err := database.Configuration.OneBySnowflakeID(snowflakeID)
+			if err != nil {
+				return models.Configuration{}, err
+			}
+			err = scheduler.Schedule(configuration)
 			if err != nil {
 				return models.Configuration{}, err
 			}
