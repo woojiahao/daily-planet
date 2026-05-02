@@ -26,7 +26,7 @@ var DeleteFeed = Command{
 	},
 	Handler: func(context context.CommandContext) *discordgo.InteractionResponse {
 		// TODO(woojiahao): wrap these in a transaction instead of separating the API calls
-		url := strings.Trim(context.Interaction.ApplicationCommandData().Options[0].StringValue(), " ")
+		url := strings.Trim(helpers.GetRequiredOption[string](context, "url"), " ")
 
 		feed, err := context.Database.Feed.OneByKey(models.NewFeedKey(context.CallerConfiguration.ID, url))
 		if err != nil {

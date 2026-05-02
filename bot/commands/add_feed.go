@@ -27,7 +27,7 @@ var AddFeed = Command{
 	},
 	Handler: func(context context.CommandContext) *discordgo.InteractionResponse {
 		// TODO(woojiahao): wrap these in a transaction instead of separating the API calls
-		url := strings.Trim(context.Interaction.ApplicationCommandData().Options[0].StringValue(), " ")
+		url := strings.Trim(helpers.GetRequiredOption[string](context, "url"), " ")
 
 		// Load the initial feed and cache results so that initial print won't be all spam
 		feed, err := source.LoadFeed(url)
@@ -35,7 +35,7 @@ var AddFeed = Command{
 			fmt.Printf("err is %v\n", err)
 			return helpers.CreateSimpleEmbed(
 				"Feed could not be loaded",
-				fmt.Sprintf("Failed to load feed %s into source.\nVerify that the feed is well-formed.", url, url),
+				fmt.Sprintf("Failed to load feed %s into source.\nVerify that the feed is well-formed.", url),
 				common.ColorRed,
 			)
 		}
@@ -47,7 +47,7 @@ var AddFeed = Command{
 				if sqlite3Err.ExtendedCode == sqlite3.ErrConstraintUnique {
 					return helpers.CreateSimpleEmbed(
 						"Feed NOT added",
-						fmt.Sprintf("Source %s already exists.\n\nUse `/list-feeds` to locate it or `/enable-feed %s` to enable it if it has been disabled.", url),
+						fmt.Sprintf("Source %s already exists.\n\nUse `/list-feeds` to locate it or `/enable-feed %s` to enable it if it has been disabled.", url, url),
 						common.ColorRed,
 					)
 				}
