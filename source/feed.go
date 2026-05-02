@@ -123,6 +123,11 @@ func LoadFeed(feedURL string) (Feed, error) {
 }
 
 func BulkLoadFeeds(feedURLs []string) []Feed {
+	type result struct {
+		index int
+		feed  Feed
+	}
+
 	workers := runtime.NumCPU() * 4
 	n := len(feedURLs)
 
@@ -149,15 +154,21 @@ func BulkLoadFeeds(feedURLs []string) []Feed {
 
 	var wg sync.WaitGroup
 	wg.Add(workers)
-	ch := make(chan Feed)
+	ch := make(chan result)
 	loadFeeds := func(i int) {
 		defer wg.Done()
 		urls := grouped[i]
-		for _, url := range urls {
+		for j, url := range urls {
 			feed, err := LoadFeed(url)
 			// TODO(woojiahao): maintain skipped feed list
 			if err == nil {
-				ch <- feed
+				// computing global index for the feed
+				idx := 0
+				for k := range i {
+					idx += len(grouped[k])
+				}
+				idx += j
+				ch <- result{index: idx, feed: feed}
 			}
 		}
 	}
@@ -171,9 +182,9 @@ func BulkLoadFeeds(feedURLs []string) []Feed {
 		go loadFeeds(i)
 	}
 
-	var feeds []Feed
-	for feed := range ch {
-		feeds = append(feeds, feed)
+	feeds := make([]Feed, len(feedURLs))
+	for result := range ch {
+		feeds[result.index] = result.feed
 	}
 
 	return feeds
