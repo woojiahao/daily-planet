@@ -26,7 +26,17 @@ type Bot struct {
 
 func interactionHandlerWrapper(database *db.Database, scheduler context.Scheduler, commandMap map[commands.CommandIdentifier]commands.Command) interface{} {
 	return func(session *discordgo.Session, interaction *discordgo.InteractionCreate) {
-		callerConfiguration, err := commands.GetCommandCallerConfiguration(interaction, database)
+		callerConfiguration, err := commands.GetCommandCallerConfiguration(
+			interaction,
+			scheduler,
+			database,
+		)
+		if err != nil {
+			fmt.Printf("err is %v\n", err)
+			helpers.SendMessage(session, interaction, "Failed to execute command. Try again later.")
+			return
+		}
+
 		context := context.CommandContext{
 			Session:             session,
 			Interaction:         interaction,
@@ -47,10 +57,6 @@ func interactionHandlerWrapper(database *db.Database, scheduler context.Schedule
 				}
 			}
 			if command, ok := commandMap[commands.NewCommandIdentifier(commandName, commandSub)]; ok {
-				if err != nil {
-					helpers.SendMessage(session, interaction, "Failed to execute command. Try again later.")
-					return
-				}
 				response := command.Handler(context)
 				if response != nil {
 					// printing response, else assume that the handler did something already
