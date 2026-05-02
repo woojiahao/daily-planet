@@ -15,7 +15,7 @@ var ListFeeds = Command{
 	Group:       "feed",
 	Description: "List current feed for the Daily Planet",
 	Handler: func(context context.CommandContext) *discordgo.InteractionResponse {
-		feeds, err := context.Database.Feed.All()
+		feeds, err := context.Database.Feed.AllByConfigurationID(context.CallerConfiguration.ID)
 		if err != nil {
 			fmt.Printf("err is %v\n", err)
 			return helpers.CreateSimpleEmbed(
