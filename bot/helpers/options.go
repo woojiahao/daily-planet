@@ -8,7 +8,26 @@ import (
 func GetOption[T any](context context.CommandContext, name string) (T, bool) {
 	// this is a small hack-y approach because a method cannot contain a generic, so we cannot inline this into the CommandContext as a method
 	var zero T
-	opt := context.Interaction.ApplicationCommandData().GetOption(name)
+	data := context.Interaction.ApplicationCommandData()
+
+	var find func(opts []*discordgo.ApplicationCommandInteractionDataOption) *discordgo.ApplicationCommandInteractionDataOption
+	find = func(opts []*discordgo.ApplicationCommandInteractionDataOption) *discordgo.ApplicationCommandInteractionDataOption {
+		for _, opt := range opts {
+			if opt.Name == name {
+				return opt
+			}
+
+			if len(opt.Options) > 0 {
+				if found := find(opt.Options); found != nil {
+					return found
+				}
+			}
+		}
+
+		return nil
+	}
+
+	opt := find(data.Options)
 
 	switch opt.Type {
 	case discordgo.ApplicationCommandOptionString:
@@ -34,7 +53,26 @@ func GetOption[T any](context context.CommandContext, name string) (T, bool) {
 func GetRequiredOption[T any](context context.CommandContext, name string) T {
 	// this is a small hack-y approach because a method cannot contain a generic, so we cannot inline this into the CommandContext as a method
 	var zero T
-	opt := context.Interaction.ApplicationCommandData().GetOption(name)
+	data := context.Interaction.ApplicationCommandData()
+
+	var find func(opts []*discordgo.ApplicationCommandInteractionDataOption) *discordgo.ApplicationCommandInteractionDataOption
+	find = func(opts []*discordgo.ApplicationCommandInteractionDataOption) *discordgo.ApplicationCommandInteractionDataOption {
+		for _, opt := range opts {
+			if opt.Name == name {
+				return opt
+			}
+
+			if len(opt.Options) > 0 {
+				if found := find(opt.Options); found != nil {
+					return found
+				}
+			}
+		}
+
+		return nil
+	}
+
+	opt := find(data.Options)
 
 	switch opt.Type {
 	case discordgo.ApplicationCommandOptionString:
