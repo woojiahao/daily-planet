@@ -7,6 +7,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/woojiahao/daily-planet/bot/context"
 	"github.com/woojiahao/daily-planet/bot/helpers"
+	"github.com/woojiahao/daily-planet/common"
 )
 
 var ListFeeds = Command{
@@ -20,7 +21,7 @@ var ListFeeds = Command{
 			return helpers.CreateSimpleEmbed(
 				"Failed to load feeds",
 				"The Daily Planet failed to load feeds for this source",
-				helpers.ColorRed,
+				common.ColorRed,
 			)
 		}
 
@@ -52,7 +53,7 @@ var ListFeeds = Command{
 		return helpers.CreateEmbed(
 			helpers.Embed{
 				Title:  "Feeds fetched",
-				Color:  helpers.ColorBlue,
+				Color:  common.ColorBlue,
 				Fields: fields,
 				Footer: &discordgo.MessageEmbedFooter{
 					Text: fmt.Sprintf(

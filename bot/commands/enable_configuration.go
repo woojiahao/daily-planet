@@ -6,6 +6,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/woojiahao/daily-planet/bot/context"
 	"github.com/woojiahao/daily-planet/bot/helpers"
+	"github.com/woojiahao/daily-planet/common"
 )
 
 var EnableConfiguration = Command{
@@ -20,7 +21,7 @@ var EnableConfiguration = Command{
 			return helpers.CreateSimpleEmbed(
 				"Failed to enable configuration",
 				"Failed to enable configuration for this source",
-				helpers.ColorRed,
+				common.ColorRed,
 			)
 		}
 
@@ -29,14 +30,14 @@ var EnableConfiguration = Command{
 			return helpers.CreateSimpleEmbed(
 				"Failed to start configuration's schedule",
 				"Failed to start configuration's schedule for this source",
-				helpers.ColorRed,
+				common.ColorRed,
 			)
 		}
 
 		return helpers.CreateSimpleEmbed(
 			"Configuration enabled",
 			"Configuration for this source has been enabled.\n\nYou will start receiving updates in this source.",
-			helpers.ColorGreen,
+			common.ColorGreen,
 		)
 	},
 }

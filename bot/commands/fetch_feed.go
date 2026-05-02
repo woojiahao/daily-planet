@@ -8,6 +8,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/woojiahao/daily-planet/bot/context"
 	"github.com/woojiahao/daily-planet/bot/helpers"
+	"github.com/woojiahao/daily-planet/common"
 	"github.com/woojiahao/daily-planet/db/models"
 	"github.com/woojiahao/daily-planet/source"
 )
@@ -33,7 +34,7 @@ var FetchFeed = Command{
 			return helpers.CreateSimpleEmbed(
 				"Feed could not be loaded",
 				fmt.Sprintf("Failed to load feed %s into source.\nVerify that the feed is well-formed.", url, url),
-				helpers.ColorRed,
+				common.ColorRed,
 			)
 		}
 
@@ -43,13 +44,13 @@ var FetchFeed = Command{
 				return helpers.CreateSimpleEmbed(
 					"Feed not found",
 					fmt.Sprintf("Failed to fetch feed by URL %s as it does not exist.\n\nUse `/list-feeds` to verify that it exists in this source.", url),
-					helpers.ColorRed,
+					common.ColorRed,
 				)
 			}
 			return helpers.CreateSimpleEmbed(
 				"Failed to fetch feed",
 				fmt.Sprintf("Failed to fetch feed by URL %s. Try again", url),
-				helpers.ColorRed,
+				common.ColorRed,
 			)
 		}
 
@@ -58,11 +59,11 @@ var FetchFeed = Command{
 			return helpers.CreateSimpleEmbed(
 				"Failed to fetch feed cache",
 				fmt.Sprintf("Failed to fetch cache for feed %s", url),
-				helpers.ColorRed,
+				common.ColorRed,
 			)
 		}
 
-		newArticles, newArticleKeys := helpers.FetchNewArticles(feed, cachedArticles)
+		newArticles, newArticleKeys := source.FetchNewArticles(feed, cachedArticles)
 
 		err = context.Database.Cache.InsertManyWithSameKey(
 			models.NewCacheKey(
@@ -75,7 +76,7 @@ var FetchFeed = Command{
 			return helpers.CreateSimpleEmbed(
 				"Failed to save cache",
 				fmt.Sprintf("Failed to save articles into cache for feed %s", url),
-				helpers.ColorRed,
+				common.ColorRed,
 			)
 		}
 
@@ -87,7 +88,7 @@ var FetchFeed = Command{
 		return helpers.CreateSimpleEmbed(
 			"Feed fetched",
 			strings.Join(articleStrings, "\n"),
-			helpers.ColorBlue,
+			common.ColorBlue,
 		)
 	},
 }

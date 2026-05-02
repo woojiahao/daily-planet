@@ -7,8 +7,10 @@ import (
 
 	"github.com/robfig/cron/v3"
 	"github.com/woojiahao/daily-planet/bot"
+	"github.com/woojiahao/daily-planet/common"
 	"github.com/woojiahao/daily-planet/db"
 	"github.com/woojiahao/daily-planet/db/models"
+	"github.com/woojiahao/daily-planet/source"
 )
 
 type CronEngine struct {
@@ -79,22 +81,41 @@ func (ce *CronEngine) Schedule(configuration models.Configuration) error {
 	if _, ok := ce.entries[configuration.ID]; ok {
 		return fmt.Errorf("schedule for configuration is already running. call Cancel on it first")
 	}
+
 	fmt.Printf("scheduled configuration %d with schedule %s\n", configuration.ID, configuration.CronSchedule)
 
-	entryID, err := ce.cron.AddFunc(configuration.CronSchedule, func() {
-		fmt.Printf("tick with type: %s and channel id %v\n", configuration.Type, configuration.ChannelID)
-		if configuration.Type == models.CommandSourceDM {
-			ce.bot.SendMessage(configuration.SnowflakeID, "hi")
-		} else {
-			if configuration.ChannelID.Valid {
-				ce.bot.SendMessage(configuration.ChannelID.String, "hi")
+	entryID, err := ce.cron.AddFunc(
+		configuration.CronSchedule,
+		func() {
+			if !configuration.ChannelID.Valid {
+				fmt.Printf("no channel ID configured for %s\n", configuration.SnowflakeID)
+				return
 			}
-		}
-	})
+
+			configurationID := configuration.ID
+			channelID := configuration.ChannelID.String
+			fmt.Printf("trigger with type: %s and channel id %v\n", configuration.Type, configuration.ChannelID)
+
+			source.FetchFeedsAlgorithmWrapper(
+				configurationID,
+				ce.database,
+				func(title string, description string, color common.Color) {
+					err := ce.bot.SendSimpleEmbed(
+						channelID,
+						title,
+						description,
+						color,
+					)
+					if err != nil {
+						fmt.Printf("err is %v\n", err)
+					}
+				},
+			)
+		},
+	)
 	if err != nil {
 		return err
 	}
-	fmt.Printf("next %v\n", ce.cron.Entry(entryID).Next)
 
 	ce.entries[configuration.ID] = entryID
 	return nil

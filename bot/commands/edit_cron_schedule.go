@@ -6,6 +6,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/woojiahao/daily-planet/bot/context"
 	"github.com/woojiahao/daily-planet/bot/helpers"
+	"github.com/woojiahao/daily-planet/common"
 	cron_helpers "github.com/woojiahao/daily-planet/cron/helpers"
 )
 
@@ -27,7 +28,7 @@ var EditCronSchedule = Command{
 			return helpers.CreateSimpleEmbed(
 				"Invalid Cron schedule string",
 				fmt.Sprintf("Cron schedule string `%s` is not valid.\n\nRefer to [crontab guru](https://crontab.guru) for help creating a Cron schedule string.", cronSchedule),
-				helpers.ColorRed,
+				common.ColorRed,
 			)
 		}
 
@@ -37,7 +38,7 @@ var EditCronSchedule = Command{
 			return helpers.CreateSimpleEmbed(
 				"Failed to update Cron schedule",
 				"Failed to update Cron schedule of this source",
-				helpers.ColorRed,
+				common.ColorRed,
 			)
 		}
 
@@ -46,7 +47,7 @@ var EditCronSchedule = Command{
 			return helpers.CreateSimpleEmbed(
 				"Failed to cancel configuration's schedule",
 				"Failed to disable configuration's schedule for this source",
-				helpers.ColorRed,
+				common.ColorRed,
 			)
 		}
 
@@ -55,7 +56,7 @@ var EditCronSchedule = Command{
 			return helpers.CreateSimpleEmbed(
 				"Failed to start configuration's schedule",
 				"Failed to start configuration's schedule for this source",
-				helpers.ColorRed,
+				common.ColorRed,
 			)
 		}
 
@@ -66,7 +67,7 @@ var EditCronSchedule = Command{
 				context.CallerConfiguration.CronSchedule,
 				cronSchedule,
 			),
-			helpers.ColorGreen,
+			common.ColorGreen,
 		)
 	},
 }

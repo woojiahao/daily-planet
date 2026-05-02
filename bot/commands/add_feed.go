@@ -8,6 +8,7 @@ import (
 	"github.com/mattn/go-sqlite3"
 	"github.com/woojiahao/daily-planet/bot/context"
 	"github.com/woojiahao/daily-planet/bot/helpers"
+	"github.com/woojiahao/daily-planet/common"
 	"github.com/woojiahao/daily-planet/db/models"
 	"github.com/woojiahao/daily-planet/source"
 )
@@ -35,7 +36,7 @@ var AddFeed = Command{
 			return helpers.CreateSimpleEmbed(
 				"Feed could not be loaded",
 				fmt.Sprintf("Failed to load feed %s into source.\nVerify that the feed is well-formed.", url, url),
-				helpers.ColorRed,
+				common.ColorRed,
 			)
 		}
 
@@ -47,14 +48,14 @@ var AddFeed = Command{
 					return helpers.CreateSimpleEmbed(
 						"Feed NOT added",
 						fmt.Sprintf("Source %s already exists.\n\nUse `/list-feeds` to locate it or `/enable-feed %s` to enable it if it has been disabled.", url),
-						helpers.ColorRed,
+						common.ColorRed,
 					)
 				}
 			}
 			return helpers.CreateSimpleEmbed(
 				"Feed NOT added",
 				fmt.Sprintf("Failed to add feed %s to source. Try again.", url),
-				helpers.ColorRed,
+				common.ColorRed,
 			)
 		}
 
@@ -72,14 +73,14 @@ var AddFeed = Command{
 			return helpers.CreateSimpleEmbed(
 				"Feed NOT added",
 				"Failed to load feed articles into cache",
-				helpers.ColorRed,
+				common.ColorRed,
 			)
 		}
 
 		return helpers.CreateSimpleEmbed(
 			"Feed added",
 			fmt.Sprintf("Added feed %s to source", url),
-			helpers.ColorGreen,
+			common.ColorGreen,
 		)
 	},
 }

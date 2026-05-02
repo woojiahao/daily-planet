@@ -7,6 +7,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/woojiahao/daily-planet/bot/context"
 	"github.com/woojiahao/daily-planet/bot/helpers"
+	"github.com/woojiahao/daily-planet/common"
 	"github.com/woojiahao/daily-planet/db/models"
 )
 
@@ -30,13 +31,13 @@ var DisableFeed = Command{
 				return helpers.CreateSimpleEmbed(
 					"Feed not found",
 					fmt.Sprintf("Failed to fetch feed by URL %s as it does not exist.\n\nUse `/list-feeds` to verify that it exists in this source.", url),
-					helpers.ColorRed,
+					common.ColorRed,
 				)
 			}
 			return helpers.CreateSimpleEmbed(
 				"Failed to fetch feed",
 				fmt.Sprintf("Failed to fetch feed by URL %s. Try again", url),
-				helpers.ColorRed,
+				common.ColorRed,
 			)
 		}
 
@@ -45,14 +46,14 @@ var DisableFeed = Command{
 			return helpers.CreateSimpleEmbed(
 				"Failed to disable feed",
 				fmt.Sprintf("Failed to disable feed by URL %s. Try again", url),
-				helpers.ColorRed,
+				common.ColorRed,
 			)
 		}
 
 		return helpers.CreateSimpleEmbed(
 			"Feed disabled",
 			fmt.Sprintf("Feed %s disabled", url),
-			helpers.ColorGreen,
+			common.ColorGreen,
 		)
 	},
 }

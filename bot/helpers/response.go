@@ -3,6 +3,7 @@ package helpers
 
 import (
 	"github.com/bwmarrin/discordgo"
+	"github.com/woojiahao/daily-planet/common"
 )
 
 func CreateMessage(content string) *discordgo.InteractionResponse {
@@ -18,7 +19,7 @@ func CreateMessage(content string) *discordgo.InteractionResponse {
 type Embed struct {
 	Title       string
 	Description string
-	Color       Color
+	Color       common.Color
 	Fields      []*discordgo.MessageEmbedField
 	Footer      *discordgo.MessageEmbedFooter
 }
@@ -50,7 +51,7 @@ func CreateDeferredResponse() *discordgo.InteractionResponse {
 	}
 }
 
-func CreateSimpleEmbed(title, description string, color Color) *discordgo.InteractionResponse {
+func CreateSimpleEmbed(title, description string, color common.Color) *discordgo.InteractionResponse {
 	embed := Embed{
 		Title:       title,
 		Description: description,
@@ -88,7 +89,7 @@ func CreateEphemeralEmbed(embed Embed) *discordgo.InteractionResponse {
 	return createEphemeralResponse(CreateEmbed(embed))
 }
 
-func CreateEphemeralSimpleEmbed(title, description string, color Color) *discordgo.InteractionResponse {
+func CreateEphemeralSimpleEmbed(title, description string, color common.Color) *discordgo.InteractionResponse {
 	return createEphemeralResponse(CreateSimpleEmbed(title, description, color))
 }
 
@@ -125,7 +126,7 @@ func SendEmbed(session *discordgo.Session, interaction *discordgo.InteractionCre
 	})
 }
 
-func SendSimpleEmbed(session *discordgo.Session, interaction *discordgo.InteractionCreate, title, description string, color Color) {
+func SendSimpleEmbed(session *discordgo.Session, interaction *discordgo.InteractionCreate, title, description string, color common.Color) {
 	embed := Embed{
 		Title:       title,
 		Description: description,
@@ -141,7 +142,7 @@ func SendSimpleEmbed(session *discordgo.Session, interaction *discordgo.Interact
 	})
 }
 
-func SendFollowupSimpleEmbed(session *discordgo.Session, interaction *discordgo.InteractionCreate, title, description string, color Color) {
+func SendFollowupSimpleEmbed(session *discordgo.Session, interaction *discordgo.InteractionCreate, title, description string, color common.Color) {
 	embed := Embed{
 		Title:       title,
 		Description: description,

@@ -6,6 +6,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/woojiahao/daily-planet/bot/context"
 	"github.com/woojiahao/daily-planet/bot/helpers"
+	"github.com/woojiahao/daily-planet/common"
 )
 
 var DisableConfiguration = Command{
@@ -20,7 +21,7 @@ var DisableConfiguration = Command{
 			return helpers.CreateSimpleEmbed(
 				"Failed to disable configuration",
 				"Failed to disable configuration for this source",
-				helpers.ColorRed,
+				common.ColorRed,
 			)
 		}
 
@@ -29,14 +30,14 @@ var DisableConfiguration = Command{
 			return helpers.CreateSimpleEmbed(
 				"Failed to cancel configuration's schedule",
 				"Failed to disable configuration's schedule for this source",
-				helpers.ColorRed,
+				common.ColorRed,
 			)
 		}
 
 		return helpers.CreateSimpleEmbed(
 			"Configuration disabled",
 			"Configuration for this source has been disabled.\n\nYou will no longer see updates in this source.",
-			helpers.ColorGreen,
+			common.ColorGreen,
 		)
 	},
 }

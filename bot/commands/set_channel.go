@@ -6,6 +6,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/woojiahao/daily-planet/bot/context"
 	"github.com/woojiahao/daily-planet/bot/helpers"
+	"github.com/woojiahao/daily-planet/common"
 )
 
 var SetChannel = Command{
@@ -14,11 +15,11 @@ var SetChannel = Command{
 	Group:       CommandGroupConfiguration,
 	Handler: func(context context.CommandContext) *discordgo.InteractionResponse {
 		if context.Interaction.GuildID == "" {
-			return helpers.CreateSimpleEmbed("Channel not required", "You do not need to set the channel in a DM. We will send updates directly to your DM.", helpers.ColorBlue)
+			return helpers.CreateSimpleEmbed("Channel not required", "You do not need to set the channel in a DM. We will send updates directly to your DM.", common.ColorBlue)
 		}
 
 		currentChannelID := context.Interaction.ChannelID
 		context.Database.Configuration.UpdateOneByID(context.CallerConfiguration.ID, nil, &currentChannelID, nil, nil)
-		return helpers.CreateSimpleEmbed("Channel set", fmt.Sprintf("Channel for this source set to <#%s>", currentChannelID), helpers.ColorGreen)
+		return helpers.CreateSimpleEmbed("Channel set", fmt.Sprintf("Channel for this source set to <#%s>", currentChannelID), common.ColorGreen)
 	},
 }

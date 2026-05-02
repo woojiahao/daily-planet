@@ -8,6 +8,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/woojiahao/daily-planet/bot/context"
 	"github.com/woojiahao/daily-planet/bot/helpers"
+	"github.com/woojiahao/daily-planet/common"
 	"github.com/woojiahao/daily-planet/db/models"
 )
 
@@ -33,13 +34,13 @@ var DeleteFeed = Command{
 				return helpers.CreateSimpleEmbed(
 					"Feed not found",
 					fmt.Sprintf("Failed to fetch feed by URL %s as it does not exist.\n\nUse `/list-feeds` to verify that it exists in this source.", url),
-					helpers.ColorRed,
+					common.ColorRed,
 				)
 			}
 			return helpers.CreateSimpleEmbed(
 				"Failed to fetch feed",
 				fmt.Sprintf("Failed to fetch feed by URL %s. Try again", url),
-				helpers.ColorRed,
+				common.ColorRed,
 			)
 		}
 
@@ -48,14 +49,14 @@ var DeleteFeed = Command{
 			return helpers.CreateSimpleEmbed(
 				"Failed to delete feed",
 				fmt.Sprintf("Failed to delete feed by URL %s. Try again", url),
-				helpers.ColorRed,
+				common.ColorRed,
 			)
 		}
 
 		return helpers.CreateSimpleEmbed(
 			"Feed deleted",
 			fmt.Sprintf("Feed %s has been deleted from this source", url),
-			helpers.ColorGreen,
+			common.ColorGreen,
 		)
 	},
 }
