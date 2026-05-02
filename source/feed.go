@@ -231,14 +231,23 @@ func FetchFeedsAlgorithmWrapper(
 	// 	a. For each article retrieved,
 	// 		1) Check if article exists within cache
 	// 		2) If article exists within cache, skip over it
-	// 		3) If article does not exist within cache, add to be inserted and add to new articles
 
+	// 		3) If article does not exist within cache, add to be inserted and add to new articles
 	enabledFeeds, err := database.Feed.AllEnabledByConfigurationID(configurationID)
 	if err != nil {
 		fmt.Printf("err is %v\n", err)
 		sender(
 			"Failed to fetch feeds",
 			"Failed to fetch feeds for this source.",
+			common.ColorRed,
+		)
+		return
+	}
+
+	if len(enabledFeeds) == 0 {
+		sender(
+			"No feeds",
+			"Add feeds first before trying to fetch all",
 			common.ColorRed,
 		)
 		return
