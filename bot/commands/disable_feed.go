@@ -2,13 +2,22 @@ package commands
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/woojiahao/daily-planet/bot/context"
 	"github.com/woojiahao/daily-planet/bot/helpers"
 	"github.com/woojiahao/daily-planet/common"
+	"github.com/woojiahao/daily-planet/db"
 	"github.com/woojiahao/daily-planet/db/models"
+)
+
+var (
+	errDisableFeedFeedNotFound  = errors.New("feed not found")
+	errDisableFeedDBIssue       = errors.New("database error occurred")
+	errDisableFeedDisableFailed = errors.New("failed to disable feed")
 )
 
 var DisableFeed = Command{
@@ -24,36 +33,47 @@ var DisableFeed = Command{
 		},
 	},
 	Handler: func(context context.CommandContext) *discordgo.InteractionResponse {
-		url := helpers.GetRequiredOption[string](context, "url")
-		feed, err := context.Database.Feed.OneByKey(models.NewFeedKey(context.CallerConfiguration.ID, url))
-		if err != nil {
-			if err == sql.ErrNoRows {
-				return helpers.CreateSimpleEmbed(
-					"Feed not found",
-					fmt.Sprintf("Failed to fetch feed by URL %s as it does not exist.\n\nUse `/list-feeds` to verify that it exists in this source.", url),
-					common.ColorRed,
-				)
+		url := strings.Trim(helpers.GetRequiredOption[string](context, "url"), " ")
+		configurationID := context.CallerConfiguration.ID
+
+		err := context.Database.WithTransaction(func(tx db.Database) error {
+			feed, err := tx.Feed.OneByKey(models.NewFeedKey(configurationID, url))
+			if err != nil {
+				if err == sql.ErrNoRows {
+					return errDisableFeedFeedNotFound
+				}
+				return errDisableFeedDBIssue
 			}
-			return helpers.CreateSimpleEmbed(
+
+			err = tx.Feed.UpdateOneByID(feed.ID, true)
+			if err != nil {
+				return errDisableConfigurationUpdateFailed
+			}
+
+			return nil
+		})
+
+		return common.SwitchError(err, map[error]*discordgo.InteractionResponse{
+			nil: helpers.CreateSimpleEmbed(
+				"Feed disabled",
+				fmt.Sprintf("Feed %s disabled", url),
+				common.ColorGreen,
+			),
+			errDisableFeedFeedNotFound: helpers.CreateSimpleEmbed(
+				"Feed not found",
+				fmt.Sprintf("Failed to fetch feed by URL %s as it does not exist.\n\nUse `/list-feeds` to verify that it exists in this source.", url),
+				common.ColorRed,
+			),
+			errDisableFeedDBIssue: helpers.CreateSimpleEmbed(
 				"Failed to fetch feed",
 				fmt.Sprintf("Failed to fetch feed by URL %s. Try again", url),
 				common.ColorRed,
-			)
-		}
-
-		err = context.Database.Feed.UpdateOneByID(feed.ID, true)
-		if err != nil {
-			return helpers.CreateSimpleEmbed(
+			),
+			errDisableFeedDisableFailed: helpers.CreateSimpleEmbed(
 				"Failed to disable feed",
 				fmt.Sprintf("Failed to disable feed by URL %s. Try again", url),
 				common.ColorRed,
-			)
-		}
-
-		return helpers.CreateSimpleEmbed(
-			"Feed disabled",
-			fmt.Sprintf("Feed %s disabled", url),
-			common.ColorGreen,
-		)
+			),
+		})
 	},
 }
