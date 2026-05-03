@@ -23,13 +23,13 @@ type (
 	ArticleKey string
 )
 
-// Internal representation of an article to print.
+// Article is the internal representation of an article to print.
 type Article struct {
 	Title      string
 	Link       string
 	Author     string
 	Categories []string
-	Id         string
+	ID         string
 	PubDate    time.Time
 
 	// Assumed to be in markdown format, engines should implement parsing from HTML.
@@ -41,8 +41,8 @@ type Article struct {
 }
 
 func (article Article) GetKey() ArticleKey {
-	if article.Id != "" {
-		return ArticleKey(article.Id)
+	if article.ID != "" {
+		return ArticleKey(article.ID)
 	}
 
 	if article.Link != "" {
@@ -57,10 +57,11 @@ func (article Article) GetKey() ArticleKey {
 	return ArticleKey(fmt.Sprint(article.PubDate.Unix()))
 }
 
-// Internal representation of a feed to print.
+// Feed is the internal representation of a feed to print.
 type Feed struct {
 	Title         string
 	Link          string
+	RawLink       string
 	Description   string
 	Articles      []Article
 	Language      string
@@ -97,7 +98,14 @@ func (feed Feed) GetKey() FeedKey {
 func LoadFeed(feedURL string) (Feed, error) {
 	// TODO(woojiahao): Log when feeds fail to load
 
-	resp, err := http.Get(feedURL)
+	client := &http.Client{}
+	req, err := http.NewRequest("GET", feedURL, nil)
+	if err != nil {
+		return Feed{}, err
+	}
+
+	req.Header.Set("User-Agent", "daily-planet/1.0")
+	resp, err := client.Do(req)
 	if err != nil {
 		return Feed{}, err
 	}
@@ -109,21 +117,28 @@ func LoadFeed(feedURL string) (Feed, error) {
 		return Feed{}, err
 	}
 
+	var feed Feed
+
 	// Load RSS -> Atom -> JSON in that order
 	// TODO(woojiahao): Clean up this parsing logic since we might want to directly detect the file type
 	rss, err := parseRSS(respBody)
 	if err == nil && rss.Channel.Title != "" {
-		return rss.Channel.toFeed(), nil
+		feed = rss.Channel.toFeed()
+	} else {
+		atom, err := parseAtom(respBody)
+		if err == nil && atom.Title != "" {
+			feed = atom.toFeed()
+		} else {
+			json, err := parseJSON(respBody)
+			if err == nil && json.Title != "" {
+				feed = json.toFeed()
+			}
+		}
 	}
 
-	atom, err := parseAtom(respBody)
-	if err == nil && atom.Title != "" {
-		return atom.toFeed(), nil
-	}
-
-	json, err := parseJSON(respBody)
-	if err == nil && json.Title != "" {
-		return json.toFeed(), nil
+	if feed.Title != "" {
+		feed.RawLink = feedURL
+		return feed, nil
 	}
 
 	return Feed{}, fmt.Errorf("failed to load feed, not types RSS, Atom, or JSON")
@@ -244,7 +259,7 @@ func FetchFeedsAlgorithmWrapper(
 		return
 	}
 
-	if len(enabledFeeds) == 0 {
+	if len(enabledFeeds) == 0 && sendNoArticlesUpdate {
 		sender(
 			"No feeds",
 			"Add feeds first before trying to fetch all",

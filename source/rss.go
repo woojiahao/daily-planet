@@ -34,7 +34,7 @@ func (item RSSItem) toArticle() Article {
 		Content:    content,
 		Author:     item.Author,
 		Categories: item.Categories,
-		Id:         item.Guid,
+		ID:         item.Guid,
 		PubDate:    pubDate,
 		EngineType: helpers.EngineTypeRSS,
 		Engine:     item,

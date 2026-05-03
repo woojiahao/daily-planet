@@ -2,6 +2,8 @@ package models
 
 import (
 	"database/sql"
+	"fmt"
+	"strings"
 	"time"
 
 	"github.com/woojiahao/daily-planet/db/helpers"
@@ -38,6 +40,7 @@ type FeedInterface interface {
 
 	// insert
 	InsertOne(configurationID ConfigurationID, url, feedType string) (Feed, error)
+	InsertManyWithSameConfigurationID(configurationID ConfigurationID, urls, feedTypes []string) ([]Feed, error)
 
 	// update
 	DeleteOneByID(id FeedID) error
@@ -287,6 +290,74 @@ func (m FeedModel) InsertOne(configurationID ConfigurationID, url, feedType stri
 
 	row := stmt.QueryRow(configurationID, url, feedType)
 	return parseFeedRow(row)
+}
+
+func (m FeedModel) InsertManyWithSameConfigurationID(
+	configurationID ConfigurationID,
+	urls []string,
+	feedTypes []string,
+) ([]Feed, error) {
+	if len(urls) != len(feedTypes) {
+		return nil, fmt.Errorf("urls and feedTypes must have same length")
+	}
+
+	if len(urls) == 0 {
+		return []Feed{}, nil
+	}
+
+	valueStrings := make([]string, 0, len(urls))
+	valueArgs := make([]any, 0, len(urls)*3)
+
+	for i := range urls {
+		valueStrings = append(valueStrings, "(?, ?, ?, NULL, 0)")
+		valueArgs = append(valueArgs,
+			configurationID,
+			urls[i],
+			feedTypes[i],
+		)
+	}
+
+	query := fmt.Sprintf(`
+		INSERT INTO feed (
+			configuration_id,
+			url,
+			feed_type,
+			cron_schedule,
+			disabled
+		) VALUES %s
+		ON CONFLICT DO NOTHING
+		RETURNING 
+			id,
+			configuration_id,
+			url,
+			feed_type,
+			cron_schedule,
+			disabled,
+			created_at;
+	`, strings.Join(valueStrings, ","))
+	fmt.Printf("query is\n%s\n", query)
+	fmt.Printf("values is %v\n", valueArgs)
+
+	rows, err := m.DB.Query(query, valueArgs...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var feeds []Feed
+	for rows.Next() {
+		f, err := parseFeedRow(rows)
+		if err != nil {
+			return nil, err
+		}
+		feeds = append(feeds, f)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return feeds, nil
 }
 
 func (m FeedModel) DeleteOneByID(id FeedID) error {

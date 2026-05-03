@@ -77,7 +77,7 @@ func (m CacheModel) InsertOne(cacheKey CacheKey, articleKey string) error {
 		?,
 		?,
 		?
-	);`
+	) ON CONFLICT DO NOTHING;`
 	stmt, err := m.DB.Prepare(query)
 	if err != nil {
 		return err
@@ -113,11 +113,14 @@ func (m CacheModel) InsertMany(cacheKeys []CacheKey, articleKeys []string) error
 		article_key
 	) VALUES 
 		%s
-	;`, strings.Join(queryPlaceholders, ",\n"))
+	ON CONFLICT DO NOTHING;`, strings.Join(queryPlaceholders, ",\n"))
 	stmt, err := m.DB.Prepare(query)
 	if err != nil {
 		return err
 	}
+
+	fmt.Printf("query is\n%s\n", query)
+	fmt.Printf("placeholderValues are\n%v\n", placeholderValues)
 
 	defer stmt.Close()
 
@@ -145,7 +148,7 @@ func (m CacheModel) InsertManyWithSameKey(cacheKey CacheKey, articleKeys []strin
 		article_key
 	) VALUES 
 		%s
-	;`, strings.Join(queryPlaceholders, ",\n"))
+	ON CONFLICT DO NOTHING;`, strings.Join(queryPlaceholders, ",\n"))
 	stmt, err := m.DB.Prepare(query)
 	if err != nil {
 		return err

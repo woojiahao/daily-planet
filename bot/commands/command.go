@@ -122,6 +122,7 @@ var SupportedCommands = []Command{
 	EnableFeed,
 	FetchFeed,
 	FetchFeeds,
+	UploadFeeds,
 
 	// configuration related
 	EditCronSchedule,

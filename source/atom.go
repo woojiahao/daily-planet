@@ -82,7 +82,7 @@ func (entry AtomEntry) toArticle() Article {
 		Link:       articleLink,
 		Author:     entry.Author.toAuthor(),
 		Categories: categories,
-		Id:         entry.Id,
+		ID:         entry.Id,
 		PubDate:    pubDate,
 		Content:    entry.Content.toContent(),
 		EngineType: helpers.EngineTypeAtom,

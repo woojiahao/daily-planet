@@ -77,7 +77,7 @@ func (item JSONItem) toArticle() Article {
 		Link:       item.URL,
 		Author:     author,
 		Categories: item.Tags,
-		Id:         item.Id,
+		ID:         item.Id,
 		PubDate:    pubDate,
 		Content:    content,
 		EngineType: helpers.EngineTypeJSON,
