@@ -7,6 +7,7 @@ import (
 
 	"github.com/woojiahao/daily-planet/db/helpers"
 	"github.com/woojiahao/daily-planet/db/scanner"
+	"github.com/woojiahao/daily-planet/db/transaction"
 )
 
 type (
@@ -31,7 +32,7 @@ type Configuration struct {
 }
 
 type ConfigurationModel struct {
-	DB *sql.DB
+	DB transaction.Transaction
 }
 
 type ConfigurationInterface interface {

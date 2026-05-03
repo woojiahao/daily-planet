@@ -1,12 +1,12 @@
 package models
 
 import (
-	"database/sql"
 	"fmt"
 	"strings"
 	"time"
 
 	"github.com/woojiahao/daily-planet/db/scanner"
+	"github.com/woojiahao/daily-planet/db/transaction"
 	"github.com/woojiahao/daily-planet/ds"
 )
 
@@ -24,7 +24,7 @@ type Cache struct {
 }
 
 type CacheModel struct {
-	DB *sql.DB
+	DB transaction.Transaction
 }
 
 type CacheInterface interface {

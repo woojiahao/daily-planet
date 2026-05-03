@@ -8,6 +8,7 @@ import (
 
 	"github.com/woojiahao/daily-planet/db/helpers"
 	"github.com/woojiahao/daily-planet/db/scanner"
+	"github.com/woojiahao/daily-planet/db/transaction"
 	"github.com/woojiahao/daily-planet/ds"
 )
 
@@ -27,7 +28,7 @@ type Feed struct {
 }
 
 type FeedModel struct {
-	DB *sql.DB
+	DB transaction.Transaction
 }
 
 type FeedInterface interface {
