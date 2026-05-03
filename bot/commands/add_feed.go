@@ -35,7 +35,6 @@ var AddFeed = Command{
 		},
 	},
 	Handler: func(context context.CommandContext) *discordgo.InteractionResponse {
-		// TODO(woojiahao): wrap these in a transaction instead of separating the API calls
 		url := strings.Trim(helpers.GetRequiredOption[string](context, "url"), " ")
 		configurationID := context.CallerConfiguration.ID
 
