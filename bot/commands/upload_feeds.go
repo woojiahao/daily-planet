@@ -34,13 +34,14 @@ var UploadFeeds = Command{
 			}
 
 			if err := yaml.Unmarshal(yamlConfig, &rawFeedData); err != nil {
-				helpers.SendSimpleEmbed(
+				helpers.SendFollowupSimpleEmbed(
 					context.Session,
 					context.Interaction,
 					"Failed to load YAML",
 					"Invalid YAML provided",
 					common.ColorRed,
 				)
+				return
 			}
 
 			urls := rawFeedData.Feeds
@@ -62,13 +63,14 @@ var UploadFeeds = Command{
 			dbFeeds, err := context.Database.Feed.InsertManyWithSameConfigurationID(context.CallerConfiguration.ID, feedURLs, feedTypes)
 			if err != nil {
 				fmt.Printf("err is %v\n", err)
-				helpers.SendSimpleEmbed(
+				helpers.SendFollowupSimpleEmbed(
 					context.Session,
 					context.Interaction,
 					"Feeds NOT uploaded",
 					"Failed to upload feeds to source. Try again.",
 					common.ColorRed,
 				)
+				return
 			}
 
 			dbFeedIDsByURL := make(map[string]models.FeedID)
@@ -91,16 +93,17 @@ var UploadFeeds = Command{
 			)
 			if err != nil {
 				fmt.Printf("err is %v\n", err)
-				helpers.SendSimpleEmbed(
+				helpers.SendFollowupSimpleEmbed(
 					context.Session,
 					context.Interaction,
 					"Feeds NOT uploaded",
 					"Failed to add feed articles into cache",
 					common.ColorRed,
 				)
+				return
 			}
 
-			helpers.SendSimpleEmbed(
+			helpers.SendFollowupSimpleEmbed(
 				context.Session,
 				context.Interaction,
 				"Feed added",
