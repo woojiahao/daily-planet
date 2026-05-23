@@ -1,25 +1,17 @@
 package commands
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 
 	"github.com/bwmarrin/discordgo"
-	"github.com/mattn/go-sqlite3"
+	"github.com/woojiahao/daily-planet/apperrors"
 	"github.com/woojiahao/daily-planet/bot/context"
 	"github.com/woojiahao/daily-planet/bot/helpers"
 	"github.com/woojiahao/daily-planet/common"
 	"github.com/woojiahao/daily-planet/db"
 	"github.com/woojiahao/daily-planet/db/models"
 	"github.com/woojiahao/daily-planet/source"
-)
-
-var (
-	errAddFeedLoadFeedFailed = errors.New("failed to load feed")
-	errAddFeedFeedExists     = errors.New("feed already added")
-	errAddFeedDBIssue        = errors.New("database error occurred")
-	errAddFeedCacheNotAdded  = errors.New("cache not added")
 )
 
 var AddFeed = Command{
@@ -42,61 +34,70 @@ var AddFeed = Command{
 			// Load the initial feed and cache results so that initial print won't be all spam
 			feed, err := source.LoadFeed(url)
 			if err != nil {
-				return errAddFeedLoadFeedFailed
+				return err
 			}
 
-			dbFeed, err := tx.Feed.InsertOne(configurationID, url, string(feed.EngineType))
+			dbFeeds, err := tx.Feed.Insert(models.FeedInsert{
+				ConfigurationID: configurationID,
+				URL:             url,
+				FeedType:        string(feed.EngineType),
+			})
 			if err != nil {
-				if sqlite3Err, ok := err.(sqlite3.Error); ok {
-					if sqlite3Err.ExtendedCode == sqlite3.ErrConstraintUnique {
-						return errAddFeedFeedExists
-					}
-				}
-				return errAddFeedDBIssue
+				return err
+			}
+			dbFeed := dbFeeds[0]
+			cacheKey := models.NewCacheKey(configurationID, dbFeed.ID)
+
+			// ensure that cache isn't duplicated
+			// TODO(woojiahao): this would benefit from a proper UNIQUE key on (configuration_id, feed_id) but this suffices for now
+			existingCache, err := tx.Cache.All(cacheKey)
+			if err != nil {
+				return err
 			}
 
-			var articleKeys []string
+			_, newArticleKeys := source.FetchNewArticles(feed, existingCache)
+
+			var cacheInserts []models.CacheInsert
 			// for all articles, bulk insert them into the cache
-			for _, article := range feed.Articles {
-				articleKeys = append(articleKeys, string(article.GetKey()))
+			for _, articleKey := range newArticleKeys {
+				cacheInserts = append(cacheInserts, models.CacheInsert{
+					CacheKey:   cacheKey,
+					ArticleKey: articleKey,
+				})
 			}
-			err = tx.Cache.InsertManyWithSameKey(
-				models.NewCacheKey(context.CallerConfiguration.ID, dbFeed.ID),
-				articleKeys,
-			)
+			err = tx.Cache.Insert(cacheInserts...)
 			if err != nil {
-				return errAddFeedCacheNotAdded
+				return err
 			}
 
 			return nil
 		})
 
-		return common.SwitchError(err, map[error]*discordgo.InteractionResponse{
-			nil: helpers.CreateSimpleEmbed(
-				"Feed added",
-				fmt.Sprintf("Added feed %s to source", url),
-				common.ColorGreen,
-			),
-			errAddFeedLoadFeedFailed: helpers.CreateSimpleEmbed(
-				"Feed could not be loaded",
-				fmt.Sprintf("Failed to load feed %s into source.\nVerify that the feed is well-formed.", url),
-				common.ColorRed,
-			),
-			errAddFeedFeedExists: helpers.CreateSimpleEmbed(
-				"Feed NOT added",
-				fmt.Sprintf("Source %s already exists.\n\nUse `/list-feeds` to locate it or `/enable-feed %s` to enable it if it has been disabled.", url, url),
-				common.ColorRed,
-			),
-			errAddFeedDBIssue: helpers.CreateSimpleEmbed(
-				"Feed NOT added",
-				fmt.Sprintf("Failed to add feed %s to source. Try again.", url),
-				common.ColorRed,
-			),
-			errAddFeedCacheNotAdded: helpers.CreateSimpleEmbed(
-				"Feed NOT added",
-				"Failed to load feed articles into cache",
-				common.ColorRed,
-			),
-		})
+		return common.SwitchErrorWithDefaultFunc(
+			err,
+			helpers.UnknownErrorHandler(),
+			map[error]*discordgo.InteractionResponse{
+				nil: helpers.CreateSimpleEmbed(
+					"Feed added",
+					fmt.Sprintf("Added feed %s to source", url),
+					common.ColorGreen,
+				),
+				apperrors.ErrLoadFeedFailed: helpers.CreateSimpleEmbed(
+					"Feed could not be loaded",
+					fmt.Sprintf("Failed to load feed %s into source.\nVerify that the feed is well-formed.", url),
+					common.ColorRed,
+				),
+				apperrors.ErrFeedDBError: helpers.CreateSimpleEmbed(
+					"Feed NOT added",
+					fmt.Sprintf("Failed to add feed %s to source. Try again.", url),
+					common.ColorRed,
+				),
+				apperrors.ErrCacheDBError: helpers.CreateSimpleEmbed(
+					"Feed NOT added",
+					"Failed to save feed articles into cache",
+					common.ColorRed,
+				),
+			},
+		)
 	},
 }

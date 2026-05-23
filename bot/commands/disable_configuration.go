@@ -1,18 +1,13 @@
 package commands
 
 import (
-	"errors"
-
 	"github.com/bwmarrin/discordgo"
+	"github.com/woojiahao/daily-planet/apperrors"
 	"github.com/woojiahao/daily-planet/bot/context"
 	"github.com/woojiahao/daily-planet/bot/helpers"
 	"github.com/woojiahao/daily-planet/common"
 	"github.com/woojiahao/daily-planet/db"
-)
-
-var (
-	errDisableConfigurationUpdateFailed         = errors.New("failed to update configuration row")
-	errDisableConfigurationCancelScheduleFailed = errors.New("failed to cancel configuration schedule")
+	"github.com/woojiahao/daily-planet/db/models"
 )
 
 var DisableConfiguration = Command{
@@ -26,37 +21,40 @@ var DisableConfiguration = Command{
 		err := context.Database.WithTransaction(func(tx db.Database) error {
 			if _, err := tx.Configuration.UpdateOneByID(
 				configurationID,
-				nil,
-				nil,
-				nil,
-				&disabled,
+				models.ConfigurationUpdate{
+					Disabled: &disabled,
+				},
 			); err != nil {
-				return errDisableConfigurationUpdateFailed
+				return err
 			}
 
 			if err := context.Scheduler.Cancel(configurationID); err != nil {
-				return errDisableConfigurationCancelScheduleFailed
+				return err
 			}
 
 			return nil
 		})
 
-		return common.SwitchError(err, map[error]*discordgo.InteractionResponse{
-			nil: helpers.CreateSimpleEmbed(
-				"Configuration disabled",
-				"Configuration for this source has been disabled.\n\nYou will no longer see updates in this source.",
-				common.ColorGreen,
-			),
-			errDisableConfigurationUpdateFailed: helpers.CreateSimpleEmbed(
-				"Failed to disable configuration",
-				"Failed to disable configuration for this source",
-				common.ColorRed,
-			),
-			errDisableConfigurationCancelScheduleFailed: helpers.CreateSimpleEmbed(
-				"Failed to cancel configuration's schedule",
-				"Failed to disable configuration's schedule for this source",
-				common.ColorRed,
-			),
-		})
+		return common.SwitchErrorWithDefaultFunc(
+			err,
+			helpers.UnknownErrorHandler(),
+			map[error]*discordgo.InteractionResponse{
+				nil: helpers.CreateSimpleEmbed(
+					"Configuration disabled",
+					"Configuration for this source has been disabled.\n\nYou will no longer see updates in this source.",
+					common.ColorGreen,
+				),
+				apperrors.ErrConfigurationDBError: helpers.CreateSimpleEmbed(
+					"Failed to disable configuration",
+					"Failed to disable configuration for this source",
+					common.ColorRed,
+				),
+				apperrors.ErrCronEngineConfigurationNotFound: helpers.CreateSimpleEmbed(
+					"Failed to cancel configuration's schedule",
+					"Failed to disable configuration's schedule for this source",
+					common.ColorRed,
+				),
+			},
+		)
 	},
 }

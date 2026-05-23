@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/woojiahao/daily-planet/apperrors"
 	"github.com/woojiahao/daily-planet/common"
 	"github.com/woojiahao/daily-planet/db"
 	"github.com/woojiahao/daily-planet/db/models"
@@ -101,20 +102,20 @@ func LoadFeed(feedURL string) (Feed, error) {
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", feedURL, nil)
 	if err != nil {
-		return Feed{}, err
+		return Feed{}, common.WrapError(apperrors.ErrLoadFeedFailed, err)
 	}
 
 	req.Header.Set("User-Agent", "daily-planet/1.0")
 	resp, err := client.Do(req)
 	if err != nil {
-		return Feed{}, err
+		return Feed{}, common.WrapError(apperrors.ErrLoadFeedFailed, err)
 	}
 
 	defer resp.Body.Close()
 
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return Feed{}, err
+		return Feed{}, common.WrapError(apperrors.ErrLoadFeedFailed, err)
 	}
 
 	var feed Feed
@@ -141,10 +142,15 @@ func LoadFeed(feedURL string) (Feed, error) {
 		return feed, nil
 	}
 
-	return Feed{}, fmt.Errorf("failed to load feed, not types RSS, Atom, or JSON")
+	return Feed{}, common.WrapError(apperrors.ErrLoadFeedFailed, apperrors.ErrLoadFeedUnsuppportedType)
 }
 
 func BulkLoadFeeds(feedURLs []string) []Feed {
+	if len(feedURLs) == 0 {
+		// no feeds, skip the entire process
+		return []Feed{}
+	}
+
 	type result struct {
 		index int
 		feed  Feed
@@ -231,6 +237,131 @@ func FetchNewArticles(feed Feed, cachedArticles []models.Cache) ([]Article, []st
 	return newArticles, newArticleKeys
 }
 
+func FetchFeedAlgorithmWrapper(
+	key models.FeedKey,
+	database *db.Database,
+	sendNoArticlesUpdate bool,
+	sender func(title, description string, color common.Color),
+) {
+	// Fetching algorithm:
+	// 1. Fetch all enabled feeds for this configuration
+	// 2. Map the feed ID -> feed / feed URL from the enabled feed
+	// 3. Retrieve all of the caches for the enabled feeds
+	// 4. Fetch all feeds from all sources concurrently
+	// 5. For each feed retrieved,
+	// 	a. For each article retrieved,
+	// 		1) Check if article exists within cache
+	// 		2) If article exists within cache, skip over it
+
+	// 		3) If article does not exist within cache, add to be inserted and add to new articles
+	feed, err := database.Feed.OneByKey(key)
+	if err != nil {
+		fmt.Printf("err is %v\n", err)
+		sender(
+			"Failed to fetch feed",
+			"Failed to fetch feed for this source.",
+			common.ColorRed,
+		)
+		return
+	}
+
+	cacheKey := models.NewCacheKey(feed.ConfigurationID, feed.ID)
+	caches, err := database.Cache.All(cacheKey)
+	if err != nil {
+		fmt.Printf("err is %v\n", err)
+		sender(
+			"Failed to fetch feed",
+			"Failed to fetch cache for feed in this source.",
+			common.ColorRed,
+		)
+		return
+	}
+
+	feedCaches := make(map[models.FeedID][]models.Cache)
+	for _, cache := range caches {
+		feedCaches[cache.FeedID] = append(feedCaches[cache.FeedID], cache)
+	}
+
+	sourceFeed, err := LoadFeed(feed.URL)
+	if err != nil {
+		fmt.Printf("err is %v\n", err)
+		sender(
+			"Failed to fetch feed",
+			"Failed to load articles for feed in this source.",
+			common.ColorRed,
+		)
+		return
+	}
+
+	var cacheInserts []models.CacheInsert
+	newArticles, newArticleKeys := FetchNewArticles(sourceFeed, caches)
+	for _, articleKey := range newArticleKeys {
+		cacheKey := models.NewCacheKey(feed.ConfigurationID, feed.ID)
+		cacheInserts = append(cacheInserts, models.CacheInsert{
+			CacheKey:   cacheKey,
+			ArticleKey: articleKey,
+		})
+	}
+
+	if len(newArticles) != 0 {
+		err = database.Cache.Insert(cacheInserts...)
+		if err != nil {
+			fmt.Printf("%v\n", err)
+			sender(
+				"Failed to save cache",
+				"Failed to save articles into cache in this source",
+				common.ColorRed,
+			)
+			return
+		}
+
+		var articleStrings []string
+		for _, article := range newArticles {
+			articleStrings = append(articleStrings, fmt.Sprintf("- [%s](%s)", article.Title, article.Link))
+		}
+
+		fmt.Printf("articleStrings total length %d\n", len(articleStrings))
+
+		var groupedArticleStrings [][]string
+		groupedArticleStrings = append(groupedArticleStrings, []string{})
+		acc := 0
+		const limit = 3500
+		for _, articleString := range articleStrings {
+			// include \n at the end as well
+			if acc+len(articleString)+1 > limit {
+				// split out
+				groupedArticleStrings = append(groupedArticleStrings, []string{})
+				acc = len(articleString) + 1
+			} else {
+				acc += len(articleString) + 1
+			}
+			groupedArticleStrings[len(groupedArticleStrings)-1] = append(groupedArticleStrings[len(groupedArticleStrings)-1], articleString)
+		}
+
+		fmt.Printf("grouped article strings length %d\n", len(groupedArticleStrings))
+
+		if len(groupedArticleStrings) > 0 {
+			for _, group := range groupedArticleStrings {
+				sender(
+					"Feeds fetched",
+					strings.Join(group, "\n"),
+					common.ColorBlue,
+				)
+			}
+		}
+
+		return
+	}
+
+	if sendNoArticlesUpdate {
+		sender(
+			"Feeds fetched",
+			"All feeds fetched but no new articles found",
+			common.ColorBlue,
+		)
+	}
+}
+
 func FetchFeedsAlgorithmWrapper(
 	configurationID models.ConfigurationID,
 	database *db.Database,
@@ -281,7 +412,7 @@ func FetchFeedsAlgorithmWrapper(
 		feedURLs[feed.ID] = feed.URL
 		cacheKeys = append(cacheKeys, models.NewCacheKey(feed.ConfigurationID, feed.ID))
 	}
-	caches, err := database.Cache.AllByKeys(cacheKeys)
+	caches, err := database.Cache.All(cacheKeys...)
 	if err != nil {
 		fmt.Printf("err is %v\n", err)
 		sender(
@@ -309,8 +440,7 @@ func FetchFeedsAlgorithmWrapper(
 		feedsByURLs[url] = feeds[i]
 	}
 
-	var insertCacheKeys []models.CacheKey
-	var insertArticleKeys []string
+	var cacheInserts []models.CacheInsert
 	var allArticles []Article
 	for feedID := range feedURLs {
 		feedCache := feedCaches[feedID]
@@ -323,13 +453,15 @@ func FetchFeedsAlgorithmWrapper(
 		allArticles = append(allArticles, newArticles...)
 		for _, articleKey := range newArticleKeys {
 			cacheKey := models.NewCacheKey(configurationID, feedID)
-			insertCacheKeys = append(insertCacheKeys, cacheKey)
-			insertArticleKeys = append(insertArticleKeys, articleKey)
+			cacheInserts = append(cacheInserts, models.CacheInsert{
+				CacheKey:   cacheKey,
+				ArticleKey: articleKey,
+			})
 		}
 	}
 
 	if len(allArticles) != 0 {
-		err = database.Cache.InsertMany(insertCacheKeys, insertArticleKeys)
+		err = database.Cache.Insert(cacheInserts...)
 		if err != nil {
 			fmt.Printf("%v\n", err)
 			sender(
@@ -363,7 +495,7 @@ func FetchFeedsAlgorithmWrapper(
 			groupedArticleStrings[len(groupedArticleStrings)-1] = append(groupedArticleStrings[len(groupedArticleStrings)-1], articleString)
 		}
 
-		fmt.Printf("gropued article strings length %d\n", len(groupedArticleStrings))
+		fmt.Printf("grouped article strings length %d\n", len(groupedArticleStrings))
 
 		if len(groupedArticleStrings) > 0 {
 			for _, group := range groupedArticleStrings {

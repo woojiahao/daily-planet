@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/robfig/cron/v3"
+	"github.com/woojiahao/daily-planet/apperrors"
 	"github.com/woojiahao/daily-planet/bot"
 	"github.com/woojiahao/daily-planet/common"
 	"github.com/woojiahao/daily-planet/db"
@@ -61,7 +62,7 @@ func (ce *CronEngine) Stop() {
 
 func (ce *CronEngine) Cancel(configurationID models.ConfigurationID) error {
 	if entryID, ok := ce.entries[configurationID]; !ok {
-		return fmt.Errorf("configuration not scheduled")
+		return apperrors.ErrCronEngineConfigurationNotFound
 	} else {
 		ce.cron.Remove(entryID)
 		delete(ce.entries, configurationID)
@@ -79,7 +80,7 @@ func (ce *CronEngine) ScheduleConfiguration(configurationID models.Configuration
 
 func (ce *CronEngine) Schedule(configuration models.Configuration) error {
 	if _, ok := ce.entries[configuration.ID]; ok {
-		return fmt.Errorf("schedule for configuration is already running. call Cancel on it first")
+		return apperrors.ErrCronEngineScheduleAlreadyRunning
 	}
 
 	fmt.Printf("scheduled configuration %d with schedule %s\n", configuration.ID, configuration.CronSchedule)
@@ -96,26 +97,29 @@ func (ce *CronEngine) Schedule(configuration models.Configuration) error {
 			channelID := configuration.ChannelID.String
 			fmt.Printf("trigger with type: %s and channel id %v\n", configuration.Type, configuration.ChannelID)
 
-			source.FetchFeedsAlgorithmWrapper(
-				configurationID,
-				ce.database,
-				false,
-				func(title string, description string, color common.Color) {
-					err := ce.bot.SendSimpleEmbed(
-						channelID,
-						title,
-						description,
-						color,
-					)
-					if err != nil {
-						fmt.Printf("err is %v\n", err)
-					}
-				},
-			)
+			ce.database.WithTransaction(func(tx db.Database) error {
+				source.FetchFeedsAlgorithmWrapper(
+					configurationID,
+					&tx,
+					false,
+					func(title string, description string, color common.Color) {
+						err := ce.bot.SendSimpleEmbed(
+							channelID,
+							title,
+							description,
+							color,
+						)
+						if err != nil {
+							fmt.Printf("err is %v\n", err)
+						}
+					},
+				)
+				return nil
+			})
 		},
 	)
 	if err != nil {
-		return err
+		return common.WrapError(apperrors.ErrCronEngineScheduleError, err)
 	}
 
 	ce.entries[configuration.ID] = entryID

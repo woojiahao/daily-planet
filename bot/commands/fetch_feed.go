@@ -1,14 +1,13 @@
 package commands
 
 import (
-	"database/sql"
-	"fmt"
 	"strings"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/woojiahao/daily-planet/bot/context"
 	"github.com/woojiahao/daily-planet/bot/helpers"
 	"github.com/woojiahao/daily-planet/common"
+	"github.com/woojiahao/daily-planet/db"
 	"github.com/woojiahao/daily-planet/db/models"
 	"github.com/woojiahao/daily-planet/source"
 )
@@ -26,69 +25,30 @@ var FetchFeed = Command{
 		},
 	},
 	Handler: func(context context.CommandContext) *discordgo.InteractionResponse {
-		url := helpers.GetRequiredOption[string](context, "url")
+		url := strings.Trim(helpers.GetRequiredOption[string](context, "url"), " ")
+		configurationID := context.CallerConfiguration.ID
 
-		feed, err := source.LoadFeed(url)
-		if err != nil {
-			fmt.Printf("err is %v\n", err)
-			return helpers.CreateSimpleEmbed(
-				"Feed could not be loaded",
-				fmt.Sprintf("Failed to load feed %s into source.\nVerify that the feed is well-formed.", url, url),
-				common.ColorRed,
-			)
-		}
-
-		dbFeed, err := context.Database.Feed.OneByKey(models.NewFeedKey(context.CallerConfiguration.ID, url))
-		if err != nil {
-			if err == sql.ErrNoRows {
-				return helpers.CreateSimpleEmbed(
-					"Feed not found",
-					fmt.Sprintf("Failed to fetch feed by URL %s as it does not exist.\n\nUse `/list-feeds` to verify that it exists in this source.", url),
-					common.ColorRed,
+		go func() {
+			context.Database.WithTransaction(func(tx db.Database) error {
+				source.FetchFeedAlgorithmWrapper(
+					models.NewFeedKey(configurationID, url),
+					&tx,
+					true,
+					func(title, description string, color common.Color) {
+						helpers.SendFollowupSimpleEmbed(
+							context.Session,
+							context.Interaction,
+							title,
+							description,
+							color,
+						)
+					},
 				)
-			}
-			return helpers.CreateSimpleEmbed(
-				"Failed to fetch feed",
-				fmt.Sprintf("Failed to fetch feed by URL %s. Try again", url),
-				common.ColorRed,
-			)
-		}
 
-		cachedArticles, err := context.Database.Cache.AllByKey(models.NewCacheKey(context.CallerConfiguration.ID, dbFeed.ID))
-		if err != nil {
-			return helpers.CreateSimpleEmbed(
-				"Failed to fetch feed cache",
-				fmt.Sprintf("Failed to fetch cache for feed %s", url),
-				common.ColorRed,
-			)
-		}
+				return nil
+			})
+		}()
 
-		newArticles, newArticleKeys := source.FetchNewArticles(feed, cachedArticles)
-
-		err = context.Database.Cache.InsertManyWithSameKey(
-			models.NewCacheKey(
-				context.CallerConfiguration.ID,
-				dbFeed.ID,
-			),
-			newArticleKeys,
-		)
-		if err != nil {
-			return helpers.CreateSimpleEmbed(
-				"Failed to save cache",
-				fmt.Sprintf("Failed to save articles into cache for feed %s", url),
-				common.ColorRed,
-			)
-		}
-
-		var articleStrings []string
-		for _, article := range newArticles {
-			articleStrings = append(articleStrings, fmt.Sprintf("- [%s](%s)", article.Title, article.Link))
-		}
-
-		return helpers.CreateSimpleEmbed(
-			"Feed fetched",
-			strings.Join(articleStrings, "\n"),
-			common.ColorBlue,
-		)
+		return helpers.CreateDeferredResponse()
 	},
 }
