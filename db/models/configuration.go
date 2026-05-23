@@ -2,11 +2,15 @@ package models
 
 import (
 	"database/sql"
+	"errors"
 	"strings"
 	"time"
 
+	"github.com/woojiahao/daily-planet/apperrors"
+	"github.com/woojiahao/daily-planet/common"
 	"github.com/woojiahao/daily-planet/db/helpers"
 	"github.com/woojiahao/daily-planet/db/scanner"
+	"github.com/woojiahao/daily-planet/db/transaction"
 )
 
 type (
@@ -31,7 +35,24 @@ type Configuration struct {
 }
 
 type ConfigurationModel struct {
-	DB *sql.DB
+	DB transaction.Transaction
+}
+
+type ConfigurationInsert struct {
+	SnowflakeID   string
+	ChannelID     *string
+	CommandSource CommandSource
+}
+
+type ConfigurationUpdate struct {
+	CronSchedule *string
+	ChannelID    *string
+	ShowStats    *bool
+	Disabled     *bool
+}
+
+func (cu ConfigurationUpdate) hasUpdate() bool {
+	return cu.CronSchedule != nil || cu.ChannelID != nil || cu.ShowStats != nil || cu.Disabled != nil
 }
 
 type ConfigurationInterface interface {
@@ -41,11 +62,10 @@ type ConfigurationInterface interface {
 	OneBySnowflakeID(snowflakeID string) (Configuration, error)
 
 	// insert
-	InsertOne(snowflakeID string, channelID *string, commandSource CommandSource) error
+	InsertOne(configurationInsert ConfigurationInsert) error
 
 	// update
-	// TODO(woojiahao): make this a struct for the inputs
-	UpdateOneByID(id ConfigurationID, cronSchedule, channelID *string, showStats, disabled *bool) (Configuration, error)
+	UpdateOneByID(id ConfigurationID, configurationUpdate ConfigurationUpdate) (Configuration, error)
 }
 
 func parseConfigurationRow(rows scanner.RowScanner) (Configuration, error) {
@@ -103,7 +123,7 @@ func (m ConfigurationModel) All() ([]Configuration, error) {
 	for rows.Next() {
 		configuration, err := parseConfigurationRow(rows)
 		if err != nil {
-			return nil, err
+			return nil, common.WrapError(apperrors.ErrConfigurationDBError, err)
 		}
 		configurations = append(configurations, configuration)
 	}
@@ -127,17 +147,14 @@ func (m ConfigurationModel) OneByID(id ConfigurationID) (Configuration, error) {
 	WHERE
 		id = ?
 	LIMIT 1;`
-	stmt, err := m.DB.Prepare(query)
-	if err != nil {
-		return Configuration{}, err
-	}
-	defer stmt.Close()
-
-	row := stmt.QueryRow(id)
+	row := m.DB.QueryRow(query, id)
 
 	configuration, err := parseConfigurationRow(row)
 	if err != nil {
-		return Configuration{}, err
+		if errors.Is(err, sql.ErrNoRows) {
+			return Configuration{}, common.WrapError(apperrors.ErrConfigurationNotFound, err)
+		}
+		return Configuration{}, common.WrapError(apperrors.ErrConfigurationDBError, err)
 	}
 
 	return configuration, nil
@@ -158,24 +175,20 @@ func (m ConfigurationModel) OneBySnowflakeID(snowflakeID string) (Configuration,
 		configuration
 	WHERE
 		snowflake_id = ?;`
-	stmt, err := m.DB.Prepare(query)
-	if err != nil {
-		return Configuration{}, err
-	}
-
-	defer stmt.Close()
-
-	row := stmt.QueryRow(snowflakeID)
+	row := m.DB.QueryRow(query, snowflakeID)
 
 	configuration, err := parseConfigurationRow(row)
 	if err != nil {
-		return Configuration{}, err
+		if errors.Is(err, sql.ErrNoRows) {
+			return Configuration{}, common.WrapError(apperrors.ErrConfigurationNotFound, err)
+		}
+		return Configuration{}, common.WrapError(apperrors.ErrConfigurationDBError, err)
 	}
 
 	return configuration, nil
 }
 
-func (m ConfigurationModel) InsertOne(snowflakeID string, channelID *string, commandSource CommandSource) error {
+func (m ConfigurationModel) InsertOne(configurationInsert ConfigurationInsert) error {
 	// Always default to a cron_schedule of once every 6 hour starting at 12am (with seconds)
 	query := `
 	INSERT INTO configuration  (
@@ -193,49 +206,47 @@ func (m ConfigurationModel) InsertOne(snowflakeID string, channelID *string, com
 		0,
 		?
 	);`
-	stmt, err := m.DB.Prepare(query)
+	_, err := m.DB.Exec(
+		query,
+		configurationInsert.SnowflakeID,
+		configurationInsert.CommandSource,
+		configurationInsert.ChannelID,
+	)
 	if err != nil {
-		return err
-	}
-
-	defer stmt.Close()
-
-	_, err = stmt.Exec(snowflakeID, commandSource, channelID)
-	if err != nil {
-		return err
+		return common.WrapError(apperrors.ErrConfigurationDBError, err)
 	}
 
 	return nil
 }
 
-func (m ConfigurationModel) UpdateOneByID(id ConfigurationID, cronSchedule, channelID *string, showStats, disabled *bool) (Configuration, error) {
-	if cronSchedule == nil && channelID == nil && showStats == nil && disabled == nil {
-		return Configuration{}, nil
+func (m ConfigurationModel) UpdateOneByID(id ConfigurationID, configurationUpdate ConfigurationUpdate) (Configuration, error) {
+	if !configurationUpdate.hasUpdate() {
+		return m.OneByID(id)
 	}
 
 	query := "UPDATE configuration SET "
 	args := []any{}
 	setClauses := []string{}
 
-	if cronSchedule != nil {
+	if configurationUpdate.CronSchedule != nil {
 		setClauses = append(setClauses, "cron_schedule = ?")
-		args = append(args, *cronSchedule)
+		args = append(args, *configurationUpdate.CronSchedule)
 	}
 
-	if channelID != nil {
+	if configurationUpdate.ChannelID != nil {
 		setClauses = append(setClauses, "channel_id = ?")
-		args = append(args, *channelID)
+		args = append(args, *configurationUpdate.ChannelID)
 	}
 
-	if showStats != nil {
+	if configurationUpdate.ShowStats != nil {
 		setClauses = append(setClauses, "show_stats = ?")
-		showStatsInt := helpers.BoolToInt(*showStats)
+		showStatsInt := helpers.BoolToInt(*configurationUpdate.ShowStats)
 		args = append(args, showStatsInt)
 	}
 
-	if disabled != nil {
+	if configurationUpdate.Disabled != nil {
 		setClauses = append(setClauses, "disabled = ?")
-		disabledInt := helpers.BoolToInt(*disabled)
+		disabledInt := helpers.BoolToInt(*configurationUpdate.Disabled)
 		args = append(args, disabledInt)
 	}
 
@@ -243,5 +254,10 @@ func (m ConfigurationModel) UpdateOneByID(id ConfigurationID, cronSchedule, chan
 	args = append(args, id)
 
 	row := m.DB.QueryRow(query, args...)
-	return parseConfigurationRow(row)
+	configuration, err := parseConfigurationRow(row)
+	if err != nil {
+		return Configuration{}, common.WrapError(apperrors.ErrConfigurationUpdateFailed, err)
+	}
+
+	return configuration, nil
 }

@@ -2,6 +2,8 @@
 package helpers
 
 import (
+	"fmt"
+
 	"github.com/bwmarrin/discordgo"
 	"github.com/woojiahao/daily-planet/common"
 )
@@ -157,4 +159,14 @@ func SendFollowupSimpleEmbed(session *discordgo.Session, interaction *discordgo.
 			},
 		},
 	)
+}
+
+func UnknownErrorHandler() func(e error) *discordgo.InteractionResponse {
+	return func(e error) *discordgo.InteractionResponse {
+		return CreateSimpleEmbed(
+			"Unknown error occurred",
+			fmt.Sprintf("Unknown error has occurred: %v", e),
+			common.ColorRed,
+		)
+	}
 }

@@ -1,14 +1,15 @@
 package commands
 
 import (
-	"database/sql"
 	"fmt"
 	"strings"
 
 	"github.com/bwmarrin/discordgo"
+	"github.com/woojiahao/daily-planet/apperrors"
 	"github.com/woojiahao/daily-planet/bot/context"
 	"github.com/woojiahao/daily-planet/bot/helpers"
 	"github.com/woojiahao/daily-planet/common"
+	"github.com/woojiahao/daily-planet/db"
 	"github.com/woojiahao/daily-planet/db/models"
 )
 
@@ -25,38 +26,43 @@ var DeleteFeed = Command{
 		},
 	},
 	Handler: func(context context.CommandContext) *discordgo.InteractionResponse {
-		// TODO(woojiahao): wrap these in a transaction instead of separating the API calls
 		url := strings.Trim(helpers.GetRequiredOption[string](context, "url"), " ")
+		configurationID := context.CallerConfiguration.ID
 
-		feed, err := context.Database.Feed.OneByKey(models.NewFeedKey(context.CallerConfiguration.ID, url))
-		if err != nil {
-			if err == sql.ErrNoRows {
-				return helpers.CreateSimpleEmbed(
+		err := context.Database.WithTransaction(func(tx db.Database) error {
+			feed, err := tx.Feed.OneByKey(models.NewFeedKey(configurationID, url))
+			if err != nil {
+				return err
+			}
+
+			err = tx.Feed.DeleteOneByID(feed.ID)
+			if err != nil {
+				return err
+			}
+
+			return nil
+		})
+
+		return common.SwitchErrorWithDefaultFunc(
+			err,
+			helpers.UnknownErrorHandler(),
+			map[error]*discordgo.InteractionResponse{
+				nil: helpers.CreateSimpleEmbed(
+					"Feed deleted",
+					fmt.Sprintf("Feed %s has been deleted from this source", url),
+					common.ColorGreen,
+				),
+				apperrors.ErrFeedNotFound: helpers.CreateSimpleEmbed(
 					"Feed not found",
 					fmt.Sprintf("Failed to fetch feed by URL %s as it does not exist.\n\nUse `/list-feeds` to verify that it exists in this source.", url),
 					common.ColorRed,
-				)
-			}
-			return helpers.CreateSimpleEmbed(
-				"Failed to fetch feed",
-				fmt.Sprintf("Failed to fetch feed by URL %s. Try again", url),
-				common.ColorRed,
-			)
-		}
-
-		err = context.Database.Feed.DeleteOneByID(feed.ID)
-		if err != nil {
-			return helpers.CreateSimpleEmbed(
-				"Failed to delete feed",
-				fmt.Sprintf("Failed to delete feed by URL %s. Try again", url),
-				common.ColorRed,
-			)
-		}
-
-		return helpers.CreateSimpleEmbed(
-			"Feed deleted",
-			fmt.Sprintf("Feed %s has been deleted from this source", url),
-			common.ColorGreen,
+				),
+				apperrors.ErrFeedDBError: helpers.CreateSimpleEmbed(
+					"Failed to delete feed",
+					fmt.Sprintf("Failed to delete feed by URL %s. Try again", url),
+					common.ColorRed,
+				),
+			},
 		)
 	},
 }

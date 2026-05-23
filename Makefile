@@ -11,7 +11,7 @@ install:
 	go mod download
 
 build:
-	go build -o ./out/daily-planet **/*.go
+	go build -o ./out/daily-planet ./main.go
 
 build-linux:
 	env GOOS=$(GOOS) GOARCH=$(GOARCH) go build -o ./out/daily-planet **/*.go

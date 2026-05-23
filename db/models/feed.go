@@ -2,12 +2,16 @@ package models
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
 
+	"github.com/woojiahao/daily-planet/apperrors"
+	"github.com/woojiahao/daily-planet/common"
 	"github.com/woojiahao/daily-planet/db/helpers"
 	"github.com/woojiahao/daily-planet/db/scanner"
+	"github.com/woojiahao/daily-planet/db/transaction"
 	"github.com/woojiahao/daily-planet/ds"
 )
 
@@ -27,7 +31,13 @@ type Feed struct {
 }
 
 type FeedModel struct {
-	DB *sql.DB
+	DB transaction.Transaction
+}
+
+type FeedInsert struct {
+	ConfigurationID ConfigurationID
+	URL             string
+	FeedType        string
 }
 
 type FeedInterface interface {
@@ -39,13 +49,12 @@ type FeedInterface interface {
 	OneByKey(key FeedKey) (Feed, error)
 
 	// insert
-	InsertOne(configurationID ConfigurationID, url, feedType string) (Feed, error)
-	InsertManyWithSameConfigurationID(configurationID ConfigurationID, urls, feedTypes []string) ([]Feed, error)
-
-	// update
-	DeleteOneByID(id FeedID) error
+	Insert(feedInserts ...FeedInsert) ([]Feed, error)
 
 	// delete
+	DeleteOneByID(id FeedID) error
+
+	// update
 	UpdateOneByID(id FeedID, disabled bool) error
 }
 
@@ -76,6 +85,21 @@ func parseFeedRow(rows scanner.RowScanner) (Feed, error) {
 	return feed, nil
 }
 
+func scanFeedRows(rows *sql.Rows) ([]Feed, error) {
+	defer rows.Close()
+
+	var feeds []Feed
+	for rows.Next() {
+		feed, err := parseFeedRow(rows)
+		if err != nil {
+			return nil, err
+		}
+		feeds = append(feeds, feed)
+	}
+
+	return feeds, nil
+}
+
 func NewFeedKey(configurationID ConfigurationID, url string) FeedKey {
 	return FeedKey(*ds.NewPair(configurationID, url))
 }
@@ -98,18 +122,12 @@ func (m FeedModel) All() ([]Feed, error) {
 		feed;`
 	rows, err := m.DB.Query(query)
 	if err != nil {
-		return nil, err
+		return nil, common.WrapError(apperrors.ErrFeedDBError, err)
 	}
 
-	defer rows.Close()
-
-	var feeds []Feed
-	for rows.Next() {
-		feed, err := parseFeedRow(rows)
-		if err != nil {
-			return nil, err
-		}
-		feeds = append(feeds, feed)
+	feeds, err := scanFeedRows(rows)
+	if err != nil {
+		return nil, common.WrapError(apperrors.ErrFeedDBError, err)
 	}
 
 	return feeds, nil
@@ -130,27 +148,14 @@ func (m FeedModel) AllEnabledByConfigurationID(id ConfigurationID) ([]Feed, erro
 	WHERE
 		disabled = 0
 		AND configuration_id = ?;`
-	stmt, err := m.DB.Prepare(query)
+	rows, err := m.DB.Query(query, id)
 	if err != nil {
-		return nil, err
+		return nil, common.WrapError(apperrors.ErrFeedDBError, err)
 	}
 
-	defer stmt.Close()
-
-	rows, err := stmt.Query(id)
+	feeds, err := scanFeedRows(rows)
 	if err != nil {
-		return nil, err
-	}
-
-	defer rows.Close()
-
-	var feeds []Feed
-	for rows.Next() {
-		feed, err := parseFeedRow(rows)
-		if err != nil {
-			return nil, err
-		}
-		feeds = append(feeds, feed)
+		return nil, common.WrapError(apperrors.ErrFeedDBError, err)
 	}
 
 	return feeds, nil
@@ -170,26 +175,14 @@ func (m FeedModel) AllByConfigurationID(configurationID ConfigurationID) ([]Feed
 		feed
 	WHERE
 		configuration_id = ?;`
-	stmt, err := m.DB.Prepare(query)
+	rows, err := m.DB.Query(query, configurationID)
 	if err != nil {
-		return nil, err
+		return nil, common.WrapError(apperrors.ErrFeedDBError, err)
 	}
 
-	defer stmt.Close()
-
-	rows, err := stmt.Query(configurationID)
+	feeds, err := scanFeedRows(rows)
 	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var feeds []Feed
-	for rows.Next() {
-		feed, err := parseFeedRow(rows)
-		if err != nil {
-			return nil, err
-		}
-		feeds = append(feeds, feed)
+		return nil, common.WrapError(apperrors.ErrFeedDBError, err)
 	}
 
 	return feeds, nil
@@ -210,17 +203,14 @@ func (m FeedModel) OneByID(id FeedID) (Feed, error) {
 	WHERE
 		id = ?
 	LIMIT 1;`
-	stmt, err := m.DB.Prepare(query)
-	if err != nil {
-		return Feed{}, err
-	}
 
-	defer stmt.Close()
-	row := stmt.QueryRow(id)
-
+	row := m.DB.QueryRow(query, id)
 	feed, err := parseFeedRow(row)
 	if err != nil {
-		return Feed{}, err
+		if errors.Is(err, sql.ErrNoRows) {
+			return Feed{}, common.WrapError(apperrors.ErrFeedNotFound, err)
+		}
+		return Feed{}, common.WrapError(apperrors.ErrFeedDBError, err)
 	}
 
 	return feed, nil
@@ -242,81 +232,39 @@ func (m FeedModel) OneByKey(key FeedKey) (Feed, error) {
 		configuration_id = ?
 		AND url = ?
 	LIMIT 1;`
-	stmt, err := m.DB.Prepare(query)
-	if err != nil {
-		return Feed{}, err
-	}
-
-	defer stmt.Close()
-	row := stmt.QueryRow(key.First, key.Second)
+	row := m.DB.QueryRow(query, key.First, key.Second)
 
 	feed, err := parseFeedRow(row)
 	if err != nil {
-		return Feed{}, err
+		if errors.Is(err, sql.ErrNoRows) {
+			return Feed{}, common.WrapError(apperrors.ErrFeedNotFound, err)
+		}
+		return Feed{}, common.WrapError(apperrors.ErrFeedDBError, err)
 	}
 
 	return feed, nil
 }
 
-func (m FeedModel) InsertOne(configurationID ConfigurationID, url, feedType string) (Feed, error) {
-	// Always default to nil cron_schedule and subsequent fetches will derive from the parent configuration
-	query := `
-	INSERT INTO feed  (
-		configuration_id,
-		url,
-		feed_type,
-		cron_schedule,
-		disabled
-	) VALUES (
-		?,
-		?,
-		?,
-		NULL,
-		0
-	) RETURNING 
-		id,
-		configuration_id,
-		url,
-		feed_type,
-		cron_schedule,
-		disabled,
-		created_at;`
-	stmt, err := m.DB.Prepare(query)
-	if err != nil {
-		return Feed{}, err
-	}
-
-	defer stmt.Close()
-
-	row := stmt.QueryRow(configurationID, url, feedType)
-	return parseFeedRow(row)
-}
-
-func (m FeedModel) InsertManyWithSameConfigurationID(
-	configurationID ConfigurationID,
-	urls []string,
-	feedTypes []string,
-) ([]Feed, error) {
-	if len(urls) != len(feedTypes) {
-		return nil, fmt.Errorf("urls and feedTypes must have same length")
-	}
-
-	if len(urls) == 0 {
+func (m FeedModel) Insert(feedInserts ...FeedInsert) ([]Feed, error) {
+	if len(feedInserts) == 0 {
 		return []Feed{}, nil
 	}
 
-	valueStrings := make([]string, 0, len(urls))
-	valueArgs := make([]any, 0, len(urls)*3)
+	n := len(feedInserts)
+	valueStrings := make([]string, 0, n)
+	valueArgs := make([]any, 0, n*3)
 
-	for i := range urls {
+	for i := range n {
 		valueStrings = append(valueStrings, "(?, ?, ?, NULL, 0)")
 		valueArgs = append(valueArgs,
-			configurationID,
-			urls[i],
-			feedTypes[i],
+			feedInserts[i].ConfigurationID,
+			feedInserts[i].URL,
+			feedInserts[i].FeedType,
 		)
 	}
 
+	// we update the id to the same value just so that conflicts will still return the
+	// corresponding feed row
 	query := fmt.Sprintf(`
 		INSERT INTO feed (
 			configuration_id,
@@ -325,7 +273,9 @@ func (m FeedModel) InsertManyWithSameConfigurationID(
 			cron_schedule,
 			disabled
 		) VALUES %s
-		ON CONFLICT DO NOTHING
+		ON CONFLICT (configuration_id, url)
+		DO UPDATE SET 
+			id = id
 		RETURNING 
 			id,
 			configuration_id,
@@ -335,26 +285,14 @@ func (m FeedModel) InsertManyWithSameConfigurationID(
 			disabled,
 			created_at;
 	`, strings.Join(valueStrings, ","))
-	fmt.Printf("query is\n%s\n", query)
-	fmt.Printf("values is %v\n", valueArgs)
 
 	rows, err := m.DB.Query(query, valueArgs...)
 	if err != nil {
-		return nil, err
+		return nil, common.WrapError(apperrors.ErrFeedDBError, err)
 	}
-	defer rows.Close()
-
-	var feeds []Feed
-	for rows.Next() {
-		f, err := parseFeedRow(rows)
-		if err != nil {
-			return nil, err
-		}
-		feeds = append(feeds, f)
-	}
-
-	if err := rows.Err(); err != nil {
-		return nil, err
+	feeds, err := scanFeedRows(rows)
+	if err != nil {
+		return nil, common.WrapError(apperrors.ErrFeedDBError, err)
 	}
 
 	return feeds, nil
@@ -364,15 +302,13 @@ func (m FeedModel) DeleteOneByID(id FeedID) error {
 	query := `
 	DELETE FROM feed
 	WHERE id = ?;`
-	stmt, err := m.DB.Prepare(query)
+
+	_, err := m.DB.Exec(query, id)
 	if err != nil {
-		return err
+		return common.WrapError(apperrors.ErrFeedDBError, err)
 	}
 
-	defer stmt.Close()
-
-	_, err = stmt.Exec(id)
-	return err
+	return nil
 }
 
 func (m FeedModel) UpdateOneByID(id FeedID, disabled bool) error {
@@ -381,13 +317,11 @@ func (m FeedModel) UpdateOneByID(id FeedID, disabled bool) error {
 	SET
 		disabled = ?
 	WHERE id = ?;`
-	stmt, err := m.DB.Prepare(query)
+
+	_, err := m.DB.Exec(query, helpers.BoolToInt(disabled), id)
 	if err != nil {
-		return err
+		return common.WrapError(apperrors.ErrFeedUpdateFailed, err)
 	}
 
-	defer stmt.Close()
-
-	_, err = stmt.Exec(helpers.BoolToInt(disabled), id)
-	return err
+	return nil
 }

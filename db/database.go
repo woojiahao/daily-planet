@@ -9,6 +9,8 @@ import (
 )
 
 type Database struct {
+	DB *sql.DB
+
 	Configuration models.ConfigurationInterface
 	Feed          models.FeedInterface
 	Cache         models.CacheInterface
@@ -27,9 +29,31 @@ func New() (*Database, error) {
 	}
 
 	database := Database{
+		DB:            db,
 		Configuration: models.ConfigurationModel{DB: db},
 		Feed:          models.FeedModel{DB: db},
 		Cache:         models.CacheModel{DB: db},
 	}
 	return &database, nil
+}
+
+func (d *Database) WithTransaction(fn func(tx Database) error) error {
+	tx, err := d.DB.Begin()
+	if err != nil {
+		return err
+	}
+
+	txDB := Database{
+		DB:            d.DB,
+		Configuration: models.ConfigurationModel{DB: tx},
+		Feed:          models.FeedModel{DB: tx},
+		Cache:         models.CacheModel{DB: tx},
+	}
+
+	if err := fn(txDB); err != nil {
+		_ = tx.Rollback()
+		return err
+	}
+
+	return tx.Commit()
 }

@@ -32,7 +32,11 @@ func GetCommandCallerConfiguration(
 		if err == sql.ErrNoRows {
 			// no configuration belonging to the current command source, create one
 			channelID := &interaction.ChannelID
-			iErr := database.Configuration.InsertOne(snowflakeID, channelID, currentCommandSource)
+			iErr := database.Configuration.InsertOne(models.ConfigurationInsert{
+				SnowflakeID:   snowflakeID,
+				ChannelID:     channelID,
+				CommandSource: currentCommandSource,
+			})
 			if iErr != nil {
 				fmt.Printf("iErr is %v\n", iErr)
 				return models.Configuration{}, iErr
