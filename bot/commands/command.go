@@ -26,37 +26,48 @@ func GetCommandCallerConfiguration(
 		snowflakeID = interaction.GuildID
 	}
 
-	configuration, err := database.Configuration.OneBySnowflakeID(snowflakeID)
-	fmt.Printf("configuration is %v and err is %v, and snowflakeID is %v and %v\n", configuration, err, snowflakeID, err == sql.ErrNoRows)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			// no configuration belonging to the current command source, create one
-			channelID := &interaction.ChannelID
-			iErr := database.Configuration.InsertOne(models.ConfigurationInsert{
-				SnowflakeID:   snowflakeID,
-				ChannelID:     channelID,
-				CommandSource: currentCommandSource,
-			})
-			if iErr != nil {
-				fmt.Printf("iErr is %v\n", iErr)
-				return models.Configuration{}, iErr
-			}
+	var configuration models.Configuration
 
-			configuration, iErr := database.Configuration.OneBySnowflakeID(snowflakeID)
-			if iErr != nil {
-				fmt.Printf("iErr is %v\n", iErr)
-				return models.Configuration{}, iErr
-			}
-			iErr = scheduler.Schedule(configuration)
-			if iErr != nil {
-				fmt.Printf("iErr is %v\n", iErr)
-				return models.Configuration{}, iErr
-			}
+	err := database.WithTransaction(func(tx db.Database) error {
+		var err error
 
-			return configuration, nil
-		} else {
-			return models.Configuration{}, err
+		configuration, err = tx.Configuration.OneBySnowflakeID(snowflakeID)
+		fmt.Printf("configuration is %v and err is %v, and snowflakeID is %v and %v\n", configuration, err, snowflakeID, err == sql.ErrNoRows)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				// no configuration belonging to the current command source, create one
+				channelID := &interaction.ChannelID
+				iErr := tx.Configuration.InsertOne(models.ConfigurationInsert{
+					SnowflakeID:   snowflakeID,
+					ChannelID:     channelID,
+					CommandSource: currentCommandSource,
+				})
+				if iErr != nil {
+					fmt.Printf("iErr is %v\n", iErr)
+					return iErr
+				}
+
+				configuration, iErr = tx.Configuration.OneBySnowflakeID(snowflakeID)
+				if iErr != nil {
+					fmt.Printf("iErr is %v\n", iErr)
+					return iErr
+				}
+				iErr = scheduler.Schedule(configuration)
+				if iErr != nil {
+					fmt.Printf("iErr is %v\n", iErr)
+					return iErr
+				}
+
+				return nil
+			} else {
+				return err
+			}
 		}
+
+		return nil
+	})
+	if err != nil {
+		return models.Configuration{}, err
 	}
 
 	return configuration, nil
