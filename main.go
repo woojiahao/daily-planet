@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
@@ -16,9 +17,10 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
+	// if .env doesn't exist, rely on the environment so don't need to panic
 	err := godotenv.Load()
 	if err != nil {
-		panic(err)
+		fmt.Printf(".env not found, relying on environments\n")
 	}
 
 	database, err := db.New()
