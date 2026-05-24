@@ -93,7 +93,7 @@ func interactionHandlerWrapper(database *db.Database, scheduler context.Schedule
 }
 
 func NewBot(database *db.Database) (*Bot, error) {
-	session, err := discordgo.New("Bot " + helpers.BotToken())
+	session, err := discordgo.New("Bot " + common.BotToken())
 	if err != nil {
 		return nil, err
 	}
@@ -115,7 +115,7 @@ func (b *Bot) Run() error {
 		return err
 	}
 
-	existingCommands, err := b.session.ApplicationCommands(b.session.State.User.ID, helpers.TestGuildID())
+	existingCommands, err := b.session.ApplicationCommands(b.session.State.User.ID, common.TestGuildID())
 	if err != nil {
 		return err
 	}
@@ -134,7 +134,7 @@ func (b *Bot) Run() error {
 	for _, command := range commands.Commands() {
 		_, err = b.session.ApplicationCommandCreate(
 			b.session.State.User.ID,
-			helpers.TestGuildID(),
+			common.TestGuildID(),
 			command,
 		)
 		if err != nil {
