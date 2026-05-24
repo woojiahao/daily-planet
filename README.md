@@ -12,12 +12,12 @@ To setup the project on Dokploy:
 1. Create new project
 2. Add a new "Application" service
 3. Set the provider to "Docker"
-  - Docker image: `ghcr.io/woojiahao/daily_planet:main`
-  - Registry URL: `ghcr.io`
+    - Docker image: `ghcr.io/woojiahao/daily_planet:main`
+    - Registry URL: `ghcr.io`
 4. Add `DISCORD_TOKEN` and `DB_ROOT` to "Environment"
-  - `DB_ROOT` is recommended to be `/data/`
+    - `DB_ROOT` is recommended to be `/data/`
 5. Create a volume mount under "Advanced"
-  - Container path must be the same as `DB_ROOT`
+    - Container path must be the same as `DB_ROOT`
 
 ## Running on Docker
 
