@@ -1,6 +1,8 @@
 package helpers
 
 import (
+	"strings"
+
 	"github.com/robfig/cron/v3"
 )
 
@@ -15,5 +17,14 @@ var parser = cron.NewParser(
 
 func IsValidCron(cronSchedule string) bool {
 	_, err := parser.Parse(cronSchedule)
-	return err == nil
+	if err != nil {
+		return false
+	}
+
+	if strings.HasPrefix(cronSchedule, "*") {
+		// explicitly disallow schedules where the seconds is *
+		return false
+	}
+
+	return true
 }

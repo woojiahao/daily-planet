@@ -63,7 +63,7 @@ var EditCronSchedule = Command{Name: "edit-cron-schedule", Group: "configuration
 			),
 			apperrors.ErrCronEngineInvalidCronString: helpers.CreateSimpleEmbed(
 				"Invalid Cron schedule string",
-				fmt.Sprintf("Cron schedule string `%s` is not valid.\n\nRefer to [crontab guru](https://crontab.guru) for help creating a Cron schedule string.", cronSchedule),
+				fmt.Sprintf("Cron schedule string `%s` is not valid or you are using '*' for the seconds field.\n\nUse '0' in the seconds field.\n\nRefer to [crontab guru](https://crontab.guru) for help creating a Cron schedule string.", cronSchedule),
 				common.ColorRed,
 			),
 			apperrors.ErrConfigurationUpdateFailed: helpers.CreateSimpleEmbed(

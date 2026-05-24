@@ -3,6 +3,7 @@ package cron
 
 import (
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/robfig/cron/v3"
@@ -19,6 +20,8 @@ type CronEngine struct {
 	database *db.Database
 	bot      bot.BotInterface
 	entries  map[models.ConfigurationID]cron.EntryID
+
+	running sync.Map // ConfigurationID -> struct{}
 }
 
 func NewCronEngine(database *db.Database, bot bot.BotInterface) *CronEngine {
@@ -28,6 +31,7 @@ func NewCronEngine(database *db.Database, bot bot.BotInterface) *CronEngine {
 		database: database,
 		bot:      bot,
 		entries:  make(map[models.ConfigurationID]cron.EntryID),
+		running:  sync.Map{},
 	}
 }
 
@@ -64,6 +68,8 @@ func (ce *CronEngine) Cancel(configurationID models.ConfigurationID) error {
 	if entryID, ok := ce.entries[configurationID]; !ok {
 		return apperrors.ErrCronEngineConfigurationNotFound
 	} else {
+		fmt.Printf("cancelling schedule for configuration %d with entryID %d\n", configurationID, entryID)
+		ce.running.Delete(configurationID)
 		ce.cron.Remove(entryID)
 		delete(ce.entries, configurationID)
 	}
@@ -83,11 +89,23 @@ func (ce *CronEngine) Schedule(configuration models.Configuration) error {
 		return apperrors.ErrCronEngineScheduleAlreadyRunning
 	}
 
-	fmt.Printf("scheduled configuration %d with schedule %s\n", configuration.ID, configuration.CronSchedule)
+	fmt.Printf(
+		"scheduled configuration %d with schedule %s at time %d\n",
+		configuration.ID,
+		configuration.CronSchedule,
+		time.Now().UnixMilli(),
+	)
 
 	entryID, err := ce.cron.AddFunc(
 		configuration.CronSchedule,
 		func() {
+			if _, loaded := ce.running.LoadOrStore(configuration.ID, struct{}{}); loaded {
+				fmt.Printf("skipping run for config %d (already running)\n", configuration.ID)
+				return
+			}
+
+			defer ce.running.Delete(configuration.ID)
+
 			if !configuration.ChannelID.Valid {
 				fmt.Printf("no channel ID configured for %s\n", configuration.SnowflakeID)
 				return
@@ -95,7 +113,12 @@ func (ce *CronEngine) Schedule(configuration models.Configuration) error {
 
 			configurationID := configuration.ID
 			channelID := configuration.ChannelID.String
-			fmt.Printf("trigger with type: %s and channel id %v\n", configuration.Type, configuration.ChannelID)
+			fmt.Printf(
+				"trigger with type: %s and channel id %v at time %d\n",
+				configuration.Type,
+				configuration.ChannelID,
+				time.Now().UnixMilli(),
+			)
 
 			ce.database.WithTransaction(func(tx db.Database) error {
 				source.FetchFeedsAlgorithmWrapper(

@@ -201,7 +201,7 @@ func (m ConfigurationModel) InsertOne(configurationInsert ConfigurationInsert) e
 	) VALUES (
 		?,
 		?,
-		'* 0 0,6,12,18 * * *',
+		'0 0 0,6,12,18 * * *',
 		0,
 		0,
 		?
