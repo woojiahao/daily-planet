@@ -23,6 +23,18 @@ func New() (*Database, error) {
 		return nil, err
 	}
 
+	db.SetMaxOpenConns(1)
+
+	_, err = db.Exec(`PRAGMA journal_mode = WAL;`)
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = db.Exec(`PRAGMA busy_timeout = 5000;`)
+	if err != nil {
+		panic(err)
+	}
+
 	// we use several FK constraints so we want to ensure that it's enabled here
 	_, err = db.Exec("PRAGMA foreign_keys = ON;")
 	if err != nil {
