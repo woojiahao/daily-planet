@@ -7,7 +7,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: daily_planet
+  IMAGE_NAME: woojiahao/daily_planet
 
 jobs:
   build-and-push-image:
