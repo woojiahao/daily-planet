@@ -1,4 +1,4 @@
-package helpers
+package common
 
 import "os"
 
@@ -12,4 +12,13 @@ func BotToken() string {
 
 func TestGuildID() string {
 	return os.Getenv("TEST_GUILD_ID")
+}
+
+func DBRoot() string {
+	if p := os.Getenv("DB_ROOT"); p != "" {
+		return p
+	}
+
+	// used for local development
+	return "./"
 }
