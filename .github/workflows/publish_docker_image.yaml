@@ -1,4 +1,3 @@
-#
 name: Create and publish a Docker image
 
 on:
@@ -47,6 +46,6 @@ jobs:
       - name: Generate artifact attestation
         uses: actions/attest@v4
         with:
-          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME}}
+          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           subject-digest: ${{ steps.push.outputs.digest }}
           push-to-registry: true
