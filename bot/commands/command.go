@@ -2,9 +2,11 @@ package commands
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 
 	"github.com/bwmarrin/discordgo"
+	"github.com/woojiahao/daily-planet/apperrors"
 	"github.com/woojiahao/daily-planet/bot/context"
 	"github.com/woojiahao/daily-planet/db"
 	"github.com/woojiahao/daily-planet/db/models"
@@ -34,7 +36,7 @@ func GetCommandCallerConfiguration(
 		configuration, err = tx.Configuration.OneBySnowflakeID(snowflakeID)
 		fmt.Printf("configuration is %v and err is %v, and snowflakeID is %v and %v\n", configuration, err, snowflakeID, err == sql.ErrNoRows)
 		if err != nil {
-			if err == sql.ErrNoRows {
+			if errors.Is(err, apperrors.ErrConfigurationNotFound) {
 				// no configuration belonging to the current command source, create one
 				channelID := &interaction.ChannelID
 				iErr := tx.Configuration.InsertOne(models.ConfigurationInsert{
