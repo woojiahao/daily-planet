@@ -11,6 +11,7 @@ import (
 	"github.com/woojiahao/daily-planet/bot"
 	"github.com/woojiahao/daily-planet/cron"
 	"github.com/woojiahao/daily-planet/db"
+	_ "modernc.org/sqlite"
 )
 
 func main() {

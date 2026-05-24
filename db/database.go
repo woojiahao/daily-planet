@@ -4,8 +4,9 @@ package db
 import (
 	"database/sql"
 
-	_ "github.com/mattn/go-sqlite3"
+	"github.com/woojiahao/daily-planet/common"
 	"github.com/woojiahao/daily-planet/db/models"
+	_ "modernc.org/sqlite"
 )
 
 type Database struct {
@@ -17,7 +18,7 @@ type Database struct {
 }
 
 func New() (*Database, error) {
-	db, err := sql.Open("sqlite3", "./daily_planet.db")
+	db, err := sql.Open("sqlite", common.DBRoot()+"daily_planet.db")
 	if err != nil {
 		return nil, err
 	}
